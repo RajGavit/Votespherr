@@ -402,7 +402,7 @@ app.get('/api/elections', async (req, res) => {
                    (SELECT COUNT(*) FROM student) AS eligible_voters,
                    (SELECT COUNT(DISTINCT v.student_id) FROM vote v WHERE v.election_id = e.election_id) AS students_voted,
                    (SELECT COUNT(DISTINCT p.position_id)
-                    FROM `position` p
+                    FROM \`position\` p
                     JOIN candidate c ON c.position_id = p.position_id AND c.election_id = p.election_id
                     WHERE p.election_id = e.election_id AND c.status = 'approved') AS positions_contested
             FROM election e

@@ -2744,3 +2744,11 @@ body.student-role .sidebar .workspace-label:not(.secondary-label) { color: #81e6
 @media (prefers-reduced-motion: reduce) {
     .nav-item, .primary-btn, .secondary-btn, .panel, .stat-card { transition: none; }
 }
+
+
+/* Registration is available directly from the initial authentication gate. */
+.auth-student-stack{min-width:0}
+.auth-register-link{border:0;background:transparent;color:var(--blue-dark);font:inherit;font-size:13px;font-weight:700;text-align:left;cursor:pointer;padding:4px 0}
+.auth-register-link:hover{text-decoration:underline}
+.auth-student-stack .auth-form{height:100%;box-sizing:border-box}
+@media(max-width:760px){.auth-student-stack{min-width:0}}

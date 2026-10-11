@@ -1955,6 +1955,51 @@ $("#adminLoginForm")?.addEventListener("submit",async event=>{
   }catch(error){$("#adminLoginError").textContent=error.message==="Failed to fetch"?"Cannot connect to the server.":error.message;}
   finally{button.disabled=false;button.textContent="Open admin workspace →";}
 });
+function setGateStudentAuthMode(mode) {
+  const registering = mode === "register";
+  if ($("#gateStudentLoginForm")) $("#gateStudentLoginForm").style.display = registering ? "none" : "";
+  if ($("#gateStudentRegisterForm")) $("#gateStudentRegisterForm").style.display = registering ? "" : "none";
+  if ($("#gateStudentLoginError")) $("#gateStudentLoginError").textContent = "";
+  if ($("#gateStudentRegisterError")) $("#gateStudentRegisterError").textContent = "";
+}
+$("#showGateStudentRegister")?.addEventListener("click", () => setGateStudentAuthMode("register"));
+$("#showGateStudentLogin")?.addEventListener("click", () => setGateStudentAuthMode("login"));
+
+$("#gateStudentRegisterForm")?.addEventListener("submit", async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const errorBox = $("#gateStudentRegisterError");
+  const button = form.querySelector('button[type="submit"]');
+  const full_name = $("#gateRegisterStudentName").value.trim();
+  const email = $("#gateRegisterStudentEmail").value.trim();
+  const password = $("#gateRegisterStudentPassword").value;
+  const confirmation = $("#gateRegisterStudentPasswordConfirm").value;
+  errorBox.textContent = "";
+  if (password.length < 8) { errorBox.textContent = "Password must contain at least 8 characters."; return; }
+  if (password !== confirmation) { errorBox.textContent = "The passwords do not match."; return; }
+  button.disabled = true;
+  button.textContent = "Creating account...";
+  try {
+    const response = await fetch(`${API_BASE}/api/students/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ full_name, email, password })
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.message || "Could not create student account.");
+    $("#gateStudentEmail").value = email;
+    $("#gateStudentPassword").value = "";
+    form.reset();
+    setGateStudentAuthMode("login");
+    $("#gateStudentLoginError").textContent = "Account created successfully. Sign in with your new password.";
+  } catch (error) {
+    errorBox.textContent = error.message === "Failed to fetch" ? "Cannot connect to the server. Please try again." : error.message;
+  } finally {
+    button.disabled = false;
+    button.textContent = "Create student account →";
+  }
+});
+
 $("#gateStudentLoginForm")?.addEventListener("submit",async event=>{
   event.preventDefault();const error=$("#gateStudentLoginError"),button=event.currentTarget.querySelector('button[type="submit"]');error.textContent="";button.disabled=true;button.textContent="Signing in...";
   try{const response=await fetch(`${API_BASE}/api/students/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("#gateStudentEmail").value.trim(),password:$("#gateStudentPassword").value})});

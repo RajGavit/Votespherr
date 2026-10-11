@@ -26,13 +26,27 @@
         <div id="adminLoginError" class="login-error" aria-live="polite"></div>
         <button class="primary-btn login-submit" type="submit">Open admin workspace →</button>
       </form>
-      <form id="gateStudentLoginForm" class="auth-form"><h2>Student</h2>
-        <label>Student email<input id="gateStudentEmail" type="email" required autocomplete="username" placeholder="student@college.edu"></label>
-        <label>Password<input id="gateStudentPassword" type="password" required autocomplete="current-password" placeholder="Student password"></label>
-        <div id="gateStudentLoginError" class="login-error" aria-live="polite"></div>
-        <button class="primary-btn login-submit" type="submit">Open student portal →</button>
-        <p class="auth-note">Student accounts must match a pre-registered student record.</p>
-      </form>
+      <div class="auth-student-stack">
+        <form id="gateStudentLoginForm" class="auth-form"><h2>Student</h2>
+          <label>Student email<input id="gateStudentEmail" type="email" required autocomplete="username" placeholder="student@college.edu"></label>
+          <label>Password<input id="gateStudentPassword" type="password" required autocomplete="current-password" placeholder="Student password"></label>
+          <div id="gateStudentLoginError" class="login-error" aria-live="polite"></div>
+          <button class="primary-btn login-submit" type="submit">Open student portal →</button>
+          <p class="auth-note">Student accounts must match a pre-registered student record.</p>
+          <button type="button" class="auth-register-link" id="showGateStudentRegister">New student? Create your account →</button>
+        </form>
+        <form id="gateStudentRegisterForm" class="auth-form" style="display:none" novalidate>
+          <h2>Create student account</h2>
+          <p class="auth-note">Only students already added by the administrator can register.</p>
+          <label>Full name<input id="gateRegisterStudentName" type="text" required maxlength="150" autocomplete="name" placeholder="Your registered full name"></label>
+          <label>Student email<input id="gateRegisterStudentEmail" type="email" required maxlength="100" autocomplete="email" placeholder="student@college.edu"></label>
+          <label>Create password<input id="gateRegisterStudentPassword" type="password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters"></label>
+          <label>Confirm password<input id="gateRegisterStudentPasswordConfirm" type="password" required minlength="8" autocomplete="new-password" placeholder="Enter password again"></label>
+          <div id="gateStudentRegisterError" class="login-error" aria-live="polite"></div>
+          <button class="primary-btn login-submit" type="submit">Create student account →</button>
+          <button type="button" class="auth-register-link" id="showGateStudentLogin">Back to sign in</button>
+        </form>
+      </div>
     </div>
   </div>
 </section>

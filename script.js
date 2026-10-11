@@ -544,6 +544,62 @@ let ballotLoading = false;
 
 const API_BASE = "";
 
+
+function renderVotingActivityChart() {
+  const svg = $(".chart-svg");
+  const labels = $(".x-labels");
+  const yLabels = $(".y-labels");
+  const range = $("#chartRange")?.value || "all";
+  if (!svg || !labels || !yLabels) return;
+
+  const sorted = [...elections].sort((a, b) => Number(a.election_id ?? a.id) - Number(b.election_id ?? b.id));
+  const visible = range === "latest" ? sorted.slice(-5) : sorted;
+  if (!visible.length) {
+    svg.innerHTML = "";
+    labels.innerHTML = "<span>No election data</span>";
+    yLabels.innerHTML = "<span>—</span><span>—</span><span>—</span><span>—</span><span>—</span><span>0</span>";
+    return;
+  }
+
+  const voteCounts = visible.map(election => Math.max(0, Number(election.votes || 0)));
+  const eligibleCounts = visible.map(election => Math.max(0, Number(election.eligible_voters || 0)));
+  const maxValue = Math.max(1, ...voteCounts, ...eligibleCounts);
+  const chartHeight = 190;
+  const chartWidth = 650;
+  const xFor = index => visible.length === 1 ? chartWidth / 2 : index * chartWidth / (visible.length - 1);
+  const yFor = value => chartHeight - (value / maxValue) * chartHeight;
+  const votePoints = voteCounts.map((value, index) => [xFor(index), yFor(value)]);
+  const eligiblePoints = eligibleCounts.map((value, index) => [xFor(index), yFor(value)]);
+  const pathFor = points => points.map((point, index) => `${index ? "L" : "M"}${point[0].toFixed(1)} ${point[1].toFixed(1)}`).join(" ");
+  const votePath = pathFor(votePoints);
+  const eligiblePath = pathFor(eligiblePoints);
+  const areaPath = `${votePath} L${votePoints[votePoints.length - 1][0].toFixed(1)} 190 L${votePoints[0][0].toFixed(1)} 190 Z`;
+  const ticks = Array.from({length: 6}, (_, index) => Math.round(maxValue * (5 - index) / 5));
+
+  yLabels.innerHTML = ticks.map(value => `<span>${value.toLocaleString()}</span>`).join("");
+  labels.innerHTML = visible.map(election => {
+    const name = election.election_name || election.name || "Election";
+    const shortName = name.length > 12 ? `${name.slice(0, 11)}…` : name;
+    return `<span title="${escapeHtml(name)}">${escapeHtml(shortName)}</span>`;
+  }).join("");
+
+  svg.setAttribute("viewBox", `0 0 ${chartWidth} 220`);
+  svg.setAttribute("aria-label", "Live database chart comparing votes cast and eligible voters by election");
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="areaFill" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stop-color="#0e9f9a" stop-opacity=".24"></stop>
+        <stop offset="100%" stop-color="#0e9f9a" stop-opacity="0"></stop>
+      </linearGradient>
+    </defs>
+    <path class="area-path" d="${areaPath}"></path>
+    <path class="line-path" d="${votePath}" style="stroke:#0e9f9a"></path>
+    <path d="${eligiblePath}" fill="none" stroke="#aab8cc" stroke-width="2" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"></path>
+    ${votePoints.map((point, index) => `<circle cx="${point[0]}" cy="${point[1]}" r="4" style="stroke:#0e9f9a"><title>${escapeHtml(visible[index].election_name || visible[index].name || "Election")}: ${voteCounts[index]} votes</title></circle>`).join("")}
+    ${eligiblePoints.map((point, index) => `<circle cx="${point[0]}" cy="${point[1]}" r="3" style="stroke:#aab8cc"><title>${escapeHtml(visible[index].election_name || visible[index].name || "Election")}: ${eligibleCounts[index]} eligible voters</title></circle>`).join("")}
+  `;
+}
+
 function updateBallotElectionStatus() {
   const badge = $("#ballotElectionStatus");
   if (!badge) return;
@@ -575,6 +631,7 @@ async function loadElections() {
     elections = Array.isArray(data.elections) ? data.elections.map(election => ({ ...election, status: election.computed_status || election.status })) : [];
     console.log("Elections loaded from database:", elections);
     updateBallotElectionStatus();
+    renderVotingActivityChart();
     renderElections();
     renderOverview();
     populateResultElectionOptions();
@@ -1447,9 +1504,7 @@ $("#exportVoters")?.addEventListener("click", () => {
   toast("Sample voter directory exported as CSV.");
 });
 
-$("#chartRange")?.addEventListener("change", event => toast(
-  event.target.value === "month" ? "Monthly chart selected (sample visual)." : "Weekly chart selected (sample visual)."
-));
+$("#chartRange")?.addEventListener("change", () => renderVotingActivityChart());
 $("#resultElection")?.addEventListener("change", () => renderResults());
 
 // Student login is authenticated by the backend; passwords are never checked in the browser.

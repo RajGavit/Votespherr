@@ -1214,7 +1214,7 @@ function showView(view) {
   const adminViews = ["overview", "elections", "candidates", "voters", "results", "complaints"];
   if (currentRole === "student" && view === "candidate-apply") { loadApplicationElections(); loadMyCandidateApplications(); }
   if (currentRole === "student" && adminViews.includes(view)) { toast("This section is available to administrators only."); view = "cast-vote"; }
-  if (currentRole === "admin" && ["student-login", "cast-vote"].includes(view)) { toast("Student sign-in is required to access the ballot."); view = "overview"; }
+  if (currentRole === "admin" && ["student-login", "cast-vote", "candidate-apply"].includes(view)) { toast("Student sign-in is required to access the ballot."); view = "overview"; }
   if (view === "cast-vote" && !studentSignedIn) {
     toast("Please sign in to the student portal first.");
     view = "student-login";

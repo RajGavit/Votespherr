@@ -672,9 +672,13 @@ function normalizeElection(election) {
     name: election.name || election.election_name || "Untitled Election",
     type: election.type || "Student Council",
     status: statusRaw === "active" ? "Live" : statusRaw.charAt(0).toUpperCase() + statusRaw.slice(1),
-    eligible: Number(election.eligible ?? 0),
+    eligible: Number(election.eligible_voters ?? election.eligible ?? 0),
     votes: Number(election.votes ?? 0),
-    progress: Number(election.progress ?? 0),
+    studentsVoted: Number(election.students_voted ?? 0),
+    positionsContested: Number(election.positions_contested ?? 0),
+    progress: Number(election.eligible_voters ?? election.eligible ?? 0)
+      ? Math.round(Number(election.students_voted ?? 0) / Number(election.eligible_voters ?? election.eligible) * 100)
+      : 0,
     start: election.start || election.start_time || "",
     end: formattedEnd
   };
@@ -727,13 +731,57 @@ function renderOverview() {
   if (activeElections) {
     activeElections.textContent = elections.filter(election => {
       const status = effectiveElectionStatus(election);
-      return status === "live" || status === "active" || status === "upcoming";
-    }).length;
+      return status === "live" || status === "active";
+    }).length.toLocaleString();
   }
   if (votesSubmitted) {
     votesSubmitted.textContent = elections.reduce(
       (sum, election) => sum + Number(election.votes || 0), 0
     ).toLocaleString();
+  }
+
+  const totalVotersFoot = document.querySelector("#totalVotersStat")?.closest(".stat-card")?.querySelector(".stat-foot span");
+  if (totalVotersFoot) totalVotersFoot.textContent = voters.length ? "Registered student records" : "No voter records yet";
+  const activeFoot = document.querySelector("#activeElectionsStat")?.closest(".stat-card")?.querySelector(".stat-foot span");
+  if (activeFoot) {
+    const upcoming = elections.filter(election => effectiveElectionStatus(election) === "upcoming").length;
+    activeFoot.textContent = upcoming ? `${upcoming} upcoming` : "Currently accepting votes";
+  }
+  const votesFoot = document.querySelector("#votesSubmittedStat")?.closest(".stat-card")?.querySelector(".stat-foot span");
+  if (votesFoot) votesFoot.textContent = elections.length ? "Recorded across all elections" : "No votes submitted";
+
+  const pendingComplaints = document.querySelector("#pendingComplaintCount");
+  const complaintFoot = pendingComplaints?.closest(".stat-card")?.querySelector(".stat-foot span");
+  if (complaintFoot && pendingComplaints) {
+    complaintFoot.textContent = Number(pendingComplaints.textContent || 0) === 1 ? "Needs attention" : "Awaiting review";
+  }
+
+  const liveElection = elections.find(election => ["active", "live"].includes(effectiveElectionStatus(election)));
+  const livePanel = document.querySelector(".election-panel");
+  if (livePanel) {
+    const badge = livePanel.querySelector(".panel-header .tag");
+    const title = livePanel.querySelector(".live-election-details h3");
+    const description = livePanel.querySelector(".live-election-details p");
+    const turnout = livePanel.querySelector(".live-progress-label strong");
+    const progress = livePanel.querySelector(".progress-track.large span");
+    if (liveElection) {
+      const item = normalizeElection(liveElection);
+      const eligible = Number(liveElection.eligible_voters ?? liveElection.eligible ?? 0);
+      const voted = Number(liveElection.students_voted ?? 0);
+      const percentage = eligible ? Math.round(voted / eligible * 100) : 0;
+      if (badge) { badge.textContent = "LIVE NOW"; badge.className = "tag tag-green"; }
+      if (title) title.textContent = item.name;
+      if (description) description.textContent = `${Number(liveElection.votes || 0).toLocaleString()} votes recorded so far.`;
+      if (turnout) turnout.textContent = `${percentage}%`;
+      if (progress) progress.style.width = `${percentage}%`;
+    } else {
+      const upcoming = elections.find(election => effectiveElectionStatus(election) === "upcoming");
+      if (badge) { badge.textContent = upcoming ? "UPCOMING" : "NO ACTIVE ELECTION"; badge.className = "tag tag-orange"; }
+      if (title) title.textContent = upcoming ? normalizeElection(upcoming).name : "No active election";
+      if (description) description.textContent = upcoming ? "Voting will open at the scheduled start time." : "Create or schedule an election to get started.";
+      if (turnout) turnout.textContent = "—";
+      if (progress) progress.style.width = "0%";
+    }
   }
 }
 

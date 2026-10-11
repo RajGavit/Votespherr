@@ -100,7 +100,7 @@ app.get('/api/students', async (req, res) => {
                    CASE WHEN COUNT(v.vote_id) > 0 THEN 'Yes' ELSE 'No' END AS voted,
                    'Verified' AS verification_status
             FROM student s
-            LEFT JOIN VOTE v ON v.student_id = s.student_id
+            LEFT JOIN vote v ON v.student_id = s.student_id
             GROUP BY s.student_id, s.full_name, s.email, s.department, s.year_of_study
             ORDER BY s.student_id DESC
         `);
@@ -686,7 +686,7 @@ if (
 
 const [voteCount] = await db.execute(
     `SELECT COUNT(*) AS total
-     FROM VOTE
+     FROM vote
      WHERE election_id = ?`,
     [electionId]
 );
@@ -1071,7 +1071,7 @@ app.post('/api/votes/batch', async (req, res) => {
         }
         for (const vote of normalized) {
             await connection.execute(
-                'INSERT INTO VOTE (student_id, election_id, position_id, candidate_id) VALUES (?, ?, ?, ?)',
+                'INSERT INTO vote (student_id, election_id, position_id, candidate_id) VALUES (?, ?, ?, ?)',
                 [vote.student_id, vote.election_id, vote.position_id, vote.candidate_id]
             );
         }
@@ -1150,7 +1150,7 @@ app.post('/api/votes', async (req, res) => {
 
         // Record the vote
         await db.query(
-            `INSERT INTO VOTE
+            `INSERT INTO vote
              (student_id, election_id, position_id, candidate_id)
              VALUES (?, ?, ?, ?)`,
             [studentId, electionId, positionId, candidateId]
@@ -1210,7 +1210,7 @@ app.get('/api/results', async (req, res) => {
             JOIN ELECTION e ON e.election_id = c.election_id
             JOIN \`POSITION\` p ON p.position_id = c.position_id AND p.election_id = e.election_id
             JOIN STUDENT s ON s.student_id = c.student_id
-            LEFT JOIN VOTE v ON v.candidate_id = c.candidate_id
+            LEFT JOIN vote v ON v.candidate_id = c.candidate_id
                              AND v.election_id = e.election_id
                              AND v.position_id = p.position_id
             ${where}
@@ -1223,7 +1223,7 @@ app.get('/api/results', async (req, res) => {
         const voteWhere = selectedElectionId ? 'WHERE election_id = ?' : '';
         const [voteSummary] = await db.execute(`
             SELECT COUNT(*) AS total_votes, COUNT(DISTINCT student_id) AS students_voted
-            FROM VOTE ${voteWhere}
+            FROM vote ${voteWhere}
         `, voteParams);
         const [studentSummary] = await db.query('SELECT COUNT(*) AS eligible_voters FROM student');
         const [positionSummary] = await db.execute(`

@@ -919,16 +919,18 @@ function renderCandidateApplications(candidateList) {
 
 async function updateCandidateStatus(candidateId, status) {
   try {
-    const response = await fetch(
-      `http://localhost:3000/api/candidates/${candidateId}/status`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ status: status })
-      }
-    );
+   
+const response = await fetch(
+  `${API_BASE}/api/candidates/${candidateId}/status`,
+  {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ status: status })
+  }
+);
+
 
     const data = await response.json();
 
@@ -1298,9 +1300,10 @@ document.addEventListener("click", event => {
 
     deleteButton.disabled = true;
 
-    fetch(`http://localhost:3000/api/elections/${id}`, {
-      method: "DELETE"
-    })
+fetch(`${API_BASE}/api/elections/${id}`, {
+  method: "DELETE"
+})
+
       .then(async response => {
         const result = await response.json();
 

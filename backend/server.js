@@ -99,7 +99,7 @@ app.get('/api/students', async (req, res) => {
                    s.year_of_study,
                    CASE WHEN COUNT(v.vote_id) > 0 THEN 'Yes' ELSE 'No' END AS voted,
                    'Verified' AS verification_status
-            FROM STUDENT s
+            FROM student s
             LEFT JOIN VOTE v ON v.student_id = s.student_id
             GROUP BY s.student_id, s.full_name, s.email, s.department, s.year_of_study
             ORDER BY s.student_id DESC
@@ -206,7 +206,7 @@ if (
 
 
 const [existingStudents] = await db.execute(
-    'SELECT student_id FROM STUDENT WHERE email = ?',
+    'SELECT student_id FROM student WHERE email = ?',
     [normalizedEmail]
 );
 
@@ -296,7 +296,7 @@ app.post('/api/students/login', async (req, res) => {
         const [students] = await db.execute(
             `SELECT student_id, full_name, email, password_hash,
                     department, year_of_study
-             FROM STUDENT
+             FROM student
              WHERE email = ?`,
             [normalizedEmail]
         );
@@ -1225,7 +1225,7 @@ app.get('/api/results', async (req, res) => {
             SELECT COUNT(*) AS total_votes, COUNT(DISTINCT student_id) AS students_voted
             FROM VOTE ${voteWhere}
         `, voteParams);
-        const [studentSummary] = await db.query('SELECT COUNT(*) AS eligible_voters FROM STUDENT');
+        const [studentSummary] = await db.query('SELECT COUNT(*) AS eligible_voters FROM student');
         const [positionSummary] = await db.execute(`
             SELECT COUNT(DISTINCT p.position_id) AS positions_contested
             FROM \`POSITION\` p

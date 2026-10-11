@@ -397,7 +397,14 @@ app.get('/api/elections', async (req, res) => {
                      WHEN NOW() < e.start_time THEN 'upcoming'
                      WHEN NOW() <= e.end_time THEN 'active'
                      ELSE 'completed'
-                   END AS computed_status
+                   END AS computed_status,
+                   (SELECT COUNT(*) FROM vote v WHERE v.election_id = e.election_id) AS votes,
+                   (SELECT COUNT(*) FROM student) AS eligible_voters,
+                   (SELECT COUNT(DISTINCT v.student_id) FROM vote v WHERE v.election_id = e.election_id) AS students_voted,
+                   (SELECT COUNT(DISTINCT p.position_id)
+                    FROM `position` p
+                    JOIN candidate c ON c.position_id = p.position_id AND c.election_id = p.election_id
+                    WHERE p.election_id = e.election_id AND c.status = 'approved') AS positions_contested
             FROM election e
             ORDER BY e.election_id DESC
         `);

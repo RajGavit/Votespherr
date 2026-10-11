@@ -1696,7 +1696,7 @@ $("#confirmVoteForm")?.addEventListener("submit", async event => {
 });
 
 function applyAuthenticatedRole(role,user){
-  currentRole=role;currentUser=user||{};document.body.classList.remove("auth-required","admin-role","student-role");document.body.classList.add(role+"-role");
+  currentRole=role;currentUser=user||{};document.body.classList.remove("auth-required","admin-role","student-role");document.body.classList.add(role+"-role");if($("#authGate"))$("#authGate").style.display="none";
   if(role==="student"){studentSignedIn=true;currentStudentId=Number(user.student_id);const name=user.full_name||user.name||user.email||"Student";
     if($("#sidebar .profile-info strong"))$("#sidebar .profile-info strong").textContent=name;
     if($("#sidebar .profile-info span"))$("#sidebar .profile-info span").textContent="Student portal";
@@ -1723,7 +1723,7 @@ $("#gateStudentLoginForm")?.addEventListener("submit",async event=>{
   finally{button.disabled=false;button.textContent="Open student portal →";}
 });
 $("#logoutBtn")?.addEventListener("click",async()=>{try{await fetch(`${API_BASE}/api/logout`,{method:"POST"});}catch(error){console.warn("Logout request failed",error);}
-  currentRole=null;currentUser=null;currentStudentId=null;studentSignedIn=false;document.body.classList.remove("admin-role","student-role");document.body.classList.add("auth-required");
+  currentRole=null;currentUser=null;currentStudentId=null;studentSignedIn=false;document.body.classList.remove("admin-role","student-role");document.body.classList.add("auth-required");if($("#authGate"))$("#authGate").style.display="grid";
   if($("#adminLoginPassword"))$("#adminLoginPassword").value="";if($("#gateStudentPassword"))$("#gateStudentPassword").value="";
 });
 async function initializeAuthentication(){try{const response=await fetch(`${API_BASE}/api/auth/me`);const data=await response.json();if(response.ok&&data.success){applyAuthenticatedRole(data.role,data.user);return;}}catch(error){console.warn("No existing authenticated session.",error);}document.body.classList.add("auth-required");}

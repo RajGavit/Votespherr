@@ -2582,3 +2582,131 @@ body.student-role .sidebar .workspace-label:not(.secondary-label){color:#4d67df}
 body.student-role .top-avatar{display:grid;place-items:center;font-size:11px;font-weight:800}
 body.student-role .sidebar .profile-info strong{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 body.admin-role .top-avatar{display:grid;place-items:center;font-size:11px;font-weight:800}
+
+
+/* VoteSphere visual refresh: midnight navy + electric teal */
+:root {
+    --ink: #14223c;
+    --muted: #75849c;
+    --line: #e3e9f3;
+    --blue: #0e9f9a;
+    --blue-dark: #087d80;
+    --canvas: #f2f6fa;
+    --green: #0b9b78;
+    --orange: #dc923d;
+}
+
+body {
+    background: var(--canvas);
+    color: var(--ink);
+}
+
+.sidebar {
+    background: linear-gradient(180deg, #10243e 0%, #152e49 58%, #10243e 100%);
+    border-right-color: #243b54;
+}
+.sidebar .brand { color: #f5fbff; }
+.sidebar .brand-light { color: #b2d7de; }
+.sidebar .brand small,
+.sidebar .workspace-label { color: #89a6bd; }
+.sidebar .nav-item { color: #b7c9d8; }
+.sidebar .nav-item:hover { background: #ffffff13; color: #fff; }
+.sidebar .nav-item.active {
+    background: #1e4957;
+    color: #b8fff1;
+    box-shadow: inset 3px 0 0 #44dfc6;
+}
+.sidebar .nav-count { background: #ffffff1c; color: #d6e8f4; }
+.sidebar .nav-divider { background: #ffffff21; }
+.sidebar .help-card {
+    background: linear-gradient(145deg, #214b5e, #1b3954);
+    border-color: #ffffff20;
+}
+.sidebar .help-card strong { color: #f0faff; }
+.sidebar .help-card p { color: #bdd0dd; }
+.sidebar .help-card button,
+.sidebar .help-icon { color: #70ead6; }
+.sidebar .profile-row { border-top-color: #ffffff20; }
+.sidebar .profile-info strong { color: #f3faff; }
+.sidebar .profile-info span { color: #9fb9cc; }
+.sidebar .admin-avatar { background: #2b5763; color: #c1fff4; }
+.sidebar .more-btn { color: #c5d7e3; }
+
+.brand-mark {
+    background: linear-gradient(145deg, #11b5a7, #1b7fbd);
+    box-shadow: 0 8px 22px #05a59e3d;
+}
+.topbar {
+    background: #ffffffed;
+    backdrop-filter: blur(14px);
+    border-bottom-color: #e1eaf2;
+}
+.page-content {
+    background: radial-gradient(circle at 85% 0%, #e3f7f5 0, transparent 32%), var(--canvas);
+}
+.panel,
+.stat-card,
+.login-card,
+.auth-gate-card {
+    border-color: #e2eaf2;
+    box-shadow: 0 8px 30px #18395309;
+}
+.panel { border-radius: 16px; }
+.stat-card { border-radius: 15px; }
+
+.primary-btn {
+    background: linear-gradient(125deg, #0e9f9a, #087e98);
+    border-color: transparent;
+    box-shadow: 0 7px 20px #0e9f9a26;
+}
+.primary-btn:hover { background: linear-gradient(125deg, #0b8d88, #086d84); }
+.secondary-btn { border-color: #d5e4e9; }
+.nav-item,
+.primary-btn,
+.secondary-btn,
+.panel,
+.stat-card {
+    transition: background .2s ease, border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+.stat-card:hover,
+.panel:hover { box-shadow: 0 13px 32px #18395312; }
+
+.status-pill.active,
+.tag-green { background: #e2f7f1; color: #087d64; }
+.demo-pill { background: #e6f7f5; color: #087e7a; }
+.demo-pill i { background: #11b7a5; }
+
+.portal-intro {
+    background: linear-gradient(145deg, #123c61 0%, #156f82 57%, #22a59b 100%);
+    box-shadow: 0 18px 40px #176f8721;
+}
+.portal-intro h2 span { color: #a8fff0; }
+.auth-gate {
+    background: radial-gradient(circle at 15% 18%, #d6f5f1, transparent 42%),
+                radial-gradient(circle at 85% 85%, #e3e7ff, transparent 43%),
+                #f4f8fc;
+}
+.auth-gate-card { border-radius: 24px; box-shadow: 0 25px 90px #143c5a20; }
+.auth-form { background: #f7fbfc; border-color: #e0edf0; }
+.auth-form input:focus { border-color: #0e9f9a; outline: 2px solid #9de9df; }
+.auth-logout { border-radius: 10px; }
+body.student-role .sidebar .workspace-label:not(.secondary-label) { color: #81e6d4; }
+
+.ballot-option:hover { border-color: #7fd8ce; background: #f5fcfb; }
+.ballot-option.selected {
+    border-color: #0e9f9a;
+    background: #effbf9;
+    box-shadow: 0 0 0 2px #0e9f9a1a;
+}
+.ballot-option.selected .radio-indicator { border-color: var(--blue); }
+.ballot-option.selected .radio-indicator:after { background: var(--blue); }
+.position-number { background: #e0f7f4; color: #087e7a; }
+.green-num { background: #e2f7f1; color: #087d64; }
+.results-banner { background: linear-gradient(110deg, #123c61, #0e9f9a); }
+.election-art { background: linear-gradient(130deg, #e5f8f6, #f7fbfc); }
+.art-orbit { border-color: #bce9e4; }
+.art-star { color: #159f9a; }
+
+@media (prefers-reduced-motion: reduce) {
+    .nav-item, .primary-btn, .secondary-btn, .panel, .stat-card { transition: none; }
+}

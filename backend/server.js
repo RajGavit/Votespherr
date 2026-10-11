@@ -208,7 +208,7 @@ app.post('/api/students', async (req, res) => {
         }
 
         const [result] = await db.execute(
-            'INSERT INTO student (full_name, email, department, year_of_study, password_hash) VALUES (?, ?, ?, ?, NULL)',
+            'INSERT INTO student (full_name, email, department, year_of_study, password_hash) VALUES (?, ?, ?, ?, \'\')',
             [name, normalizedEmail, normalizedDepartment || null, year]
         );
         return res.status(201).json({

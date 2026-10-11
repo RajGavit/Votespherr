@@ -73,6 +73,7 @@
         <div class="workspace-label secondary-label">STUDENT PORTAL PREVIEW</div>
         <button class="nav-item" data-view="student-login"><span class="nav-icon">↪</span> Student login</button>
         <button class="nav-item" data-view="cast-vote"><span class="nav-icon">✓</span> Cast vote</button>
+        <button class="nav-item" data-view="candidate-apply"><span class="nav-icon">✎</span> Apply as candidate</button>
       </nav>
       <div class="sidebar-bottom">
         <div class="help-card">
@@ -473,6 +474,22 @@
             </div>
           </div>
         </div>
+
+        <div class="view portal-view" id="view-candidate-apply">
+  <div class="panel candidate-application-panel">
+    <h2>Apply as a candidate</h2>
+    <p>Apply for a position in an upcoming election. The administrator must approve your application before you appear on the ballot.</p>
+    <form id="candidateApplicationForm" class="candidate-application-form">
+      <label>Election<select id="applicationElection" required><option value="">Loading elections...</option></select></label>
+      <label>Position<select id="applicationPosition" required disabled><option value="">Select an election first</option></select></label>
+      <label>Manifesto<textarea id="applicationManifesto" rows="5" maxlength="2000" placeholder="Describe your goals for this position (optional)"></textarea></label>
+      <div id="candidateApplicationError" class="login-error" aria-live="polite"></div>
+      <button class="primary-btn" type="submit">Submit application →</button>
+    </form>
+    <h2>My applications</h2>
+    <div class="table-wrap"><table><thead><tr><th>ELECTION</th><th>POSITION</th><th>STATUS</th></tr></thead><tbody id="myCandidateApplications"><tr><td colspan="3">No applications loaded.</td></tr></tbody></table></div>
+  </div>
+</div>
 
         <div class="view portal-view" id="view-cast-vote">
           <div class="voting-header">

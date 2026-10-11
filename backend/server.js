@@ -1,8 +1,10 @@
 
+
 const express = require('express');
 const path = require('path');
 
 const db = require('./db');
+const { initDb } = require('./initDb');
 
 const cors = require('cors');
 
@@ -59,20 +61,8 @@ app.get('/', (req, res) => {
 app.get('/style.css', (req, res) => res.sendFile(path.join(FRONTEND_DIR, 'style.css')));
 app.get('/script.js', (req, res) => res.sendFile(path.join(FRONTEND_DIR, 'script.js')));
 
-app.post('/api/test', (req, res) => {
-    console.log(req.body);
-
-    res.json({
-        message: 'Data received successfully!',
-        receivedData: req.body
-    });
-});
-
-
 app.get('/api/db-test', async (req, res) => {
     try {
-        const db = require('./db');
-
         const [rows] = await db.query('SELECT DATABASE() AS databaseName');
 
         res.json({
@@ -357,10 +347,22 @@ app.get('/api/elections', async (req, res) => {
                      WHEN NOW() < e.start_time THEN 'upcoming'
                      WHEN NOW() <= e.end_time THEN 'active'
                      ELSE 'completed'
-                   END AS computed_status
-                FROM election
-                ORDER BY e.election_id DESC
+                   END AS computed_status,
+                   (SELECT COUNT(*) FROM STUDENT) AS eligible,
+                   (SELECT COUNT(DISTINCT v.student_id)
+                      FROM VOTE v
+                     WHERE v.election_id = e.election_id) AS votes
+            FROM ELECTION e
+            ORDER BY e.election_id DESC
         `);
+
+        rows.forEach(row => {
+            row.eligible = Number(row.eligible);
+            row.votes = Number(row.votes);
+            row.progress = row.eligible > 0
+                ? Math.round((row.votes / row.eligible) * 100)
+                : 0;
+        });
 
         res.json({
             success: true,
@@ -581,10 +583,7 @@ if (existingElections.length === 0) {
 
 const existingElection = existingElections[0];
 
-if (
-    existingElection.status === 'completed' ||
-    existingElection.status === 'cancelled'
-) {
+if (['completed', 'cancelled'].includes(String(existingElection.status).toLowerCase())) {
     return res.status(400).json({
         success: false,
         message: 'Completed or cancelled elections cannot be updated'
@@ -610,7 +609,7 @@ if (new Date(existingElection.start_time) <= new Date()) {
                  end_time = ?
              WHERE election_id = ?`,
             [
-                election_name,
+                election_name.trim(),
                 description || null,
                 start_time,
                 end_time,
@@ -672,7 +671,7 @@ if (existingElections.length === 0) {
 
 
 
-const electionStatus = existingElections[0].status;
+const electionStatus = String(existingElections[0].status).toLowerCase();
 
 if (
     electionStatus === 'completed' ||
@@ -1248,6 +1247,20 @@ app.get('/api/results', async (req, res) => {
     }
 });
 
+// Catch-all error handler so malformed JSON bodies return JSON instead of an HTML error page.
+app.use((error, req, res, next) => {
+    if (error && error.type === 'entity.parse.failed') {
+        return res.status(400).json({ success: false, message: 'Request body is not valid JSON.' });
+    }
+    console.error('Unhandled error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+});
+
+// Listen first so Render detects the open port quickly, then make sure the tables exist.
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
+
+    initDb().catch(error => {
+        console.error('Could not initialise the database schema:', error.message);
+    });
 });

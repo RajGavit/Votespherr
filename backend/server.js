@@ -755,7 +755,7 @@ const [candidateCount] = await db.execute(
 
 const [resultCount] = await db.execute(
     `SELECT COUNT(*) AS total
-     FROM ELECTION_RESULT
+     FROM election_result
      WHERE election_id = ?`,
     [electionId]
 );

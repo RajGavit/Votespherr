@@ -813,7 +813,8 @@ async function loadVoters() {
 
 async function loadCandidates() {
   try {
-    const response = await fetch("http://localhost:3000/api/candidates");
+
+const response = await fetch(`${API_BASE}/api/candidates`);
     const data = await response.json();
 
     if (!response.ok || !data.success) {

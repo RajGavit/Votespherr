@@ -104,7 +104,7 @@
 
 
 
-// function renderOverview() {
+function renderOverview() {
 //   $("#overviewElectionRows").innerHTML = elections.length ? elections.map(e => electionRow(e, true)).join("") : emptyRow(5, "No elections have been created yet");
 //   const live = elections.filter(e => e.status === "Live").length;
 //   $("#totalVotersStat").textContent = voters.length.toLocaleString();
@@ -715,7 +715,46 @@ function electionRow(election, overview = false) {
     </tr>`;
 }
 
+function renderActivityChart() {
+  const svg = document.querySelector("#activityChart");
+  const yAxis = document.querySelector("#activityYAxis");
+  const xAxis = document.querySelector("#activityXAxis");
+  const range = document.querySelector("#chartRange")?.value || "all";
+  if (!svg || !yAxis || !xAxis) return;
+
+  const ordered = [...elections].sort((a, b) => Number(b.election_id ?? b.id ?? 0) - Number(a.election_id ?? a.id ?? 0));
+  const data = (range === "top" ? ordered.slice(0, 7) : ordered.slice(0, 12)).reverse().map(election => ({
+    name: election.election_name || election.name || "Election",
+    votes: Math.max(0, Number(election.votes || 0)),
+    voters: Math.max(0, Number(election.students_voted || 0))
+  }));
+  const maxValue = Math.max(5, ...data.map(item => Math.max(item.votes, item.voters)));
+  const scale = Math.ceil(maxValue / 5 / 5) * 5 || 1;
+  const ceiling = Math.max(5, scale * 5);
+  yAxis.innerHTML = Array.from({ length: 6 }, (_, i) => `<span>${Math.round(ceiling * (5 - i) / 5).toLocaleString()}</span>`).join("");
+  xAxis.innerHTML = data.map(item => {
+    const label = item.name.length > 14 ? item.name.slice(0, 12) + "…" : item.name;
+    return `<span title="${item.name.replaceAll('"', '&quot;')}">${label.replaceAll("<", "&lt;").replaceAll(">", "&gt;")}</span>`;
+  }).join("");
+
+  if (!data.length) {
+    svg.innerHTML = '<text x="325" y="110" text-anchor="middle" fill="currentColor">Create an election to see activity</text>';
+    return;
+  }
+
+  const x = index => data.length === 1 ? 325 : 12 + index * (626 / (data.length - 1));
+  const y = value => 8 + (1 - value / ceiling) * 192;
+  const votesPoints = data.map((item, i) => `${x(i)},${y(item.votes)}`).join(" ");
+  const votersPoints = data.map((item, i) => `${x(i)},${y(item.voters)}`).join(" ");
+  const dots = (key, klass) => data.map((item, i) => `<circle class="${klass}" cx="${x(i)}" cy="${y(item[key])}" r="4"><title>${item.name}: ${item[key].toLocaleString()}</title></circle>`).join("");
+  svg.innerHTML = `<polyline class="activity-line voters-line" points="${votersPoints}"></polyline>
+    <polyline class="activity-line votes-line" points="${votesPoints}"></polyline>
+    ${dots("voters", "voters-dot")}${dots("votes", "votes-dot")}`;
+}
+
+
 function renderOverview() {
+  renderActivityChart();
   const overviewRows = $("#overviewElectionRows");
   if (overviewRows) {
     overviewRows.innerHTML = elections.length
@@ -1444,9 +1483,7 @@ $("#exportVoters")?.addEventListener("click", () => {
   toast("Sample voter directory exported as CSV.");
 });
 
-$("#chartRange")?.addEventListener("change", event => toast(
-  event.target.value === "month" ? "Monthly chart selected (sample visual)." : "Weekly chart selected (sample visual)."
-));
+$("#chartRange")?.addEventListener("change", () => renderActivityChart());
 $("#resultElection")?.addEventListener("change", () => renderResults());
 
 // Student login is authenticated by the backend; passwords are never checked in the browser.

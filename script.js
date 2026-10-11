@@ -1277,6 +1277,49 @@ $("#createElectionBtn")?.addEventListener("click", () => {
   $("#electionDialog")?.showModal();
 });
 
+$("#addStudentBtn")?.addEventListener("click", () => {
+  $("#studentForm")?.reset();
+  $("#studentDialog")?.showModal();
+});
+
+$("#cancelStudentBtn")?.addEventListener("click", () => {
+  $("#studentDialog")?.close();
+  $("#studentForm")?.reset();
+});
+
+$("#studentForm")?.addEventListener("submit", async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const submitButton = form.querySelector('button[type="submit"]');
+  const formData = new FormData(form);
+  const yearValue = String(formData.get("year_of_study") || "");
+  const payload = {
+    full_name: String(formData.get("full_name") || "").trim(),
+    email: String(formData.get("email") || "").trim(),
+    department: String(formData.get("department") || "").trim(),
+    year_of_study: yearValue ? Number(yearValue) : null
+  };
+  submitButton.disabled = true;
+  try {
+    const response = await fetch(`${API_BASE}/api/students`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.message || "Could not add student.");
+    form.reset();
+    $("#studentDialog")?.close();
+    await loadVoters();
+    toast(`Student record created. Student ID: ${result.student.student_id}`);
+  } catch (error) {
+    console.error("Error creating student:", error);
+    toast(error.message || "Could not add student.");
+  } finally {
+    submitButton.disabled = false;
+  }
+});
+
 $("#createPositionBtn")?.addEventListener("click", async () => {
   await loadPositionElections();
   $("#positionDialog")?.showModal();

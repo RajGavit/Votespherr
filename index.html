@@ -445,7 +445,7 @@
                   type="submit">Sign in to portal <span>→</span></button>
                 <div class="login-error" id="loginError" aria-live="polite"></div>
               </form>
-              <p class="login-register-switch">New student? <button type="button" class="text-btn" id="showStudentRegister">Create account</button></p>
+              <div class="student-register-cta"><p><strong>New to VoteSphere?</strong><span>Only students added by the administrator can create an account.</span></p><button type="button" class="secondary-btn student-register-button" id="showStudentRegister">Create your student account <span aria-hidden="true">→</span></button></div>
               <form id="studentRegisterForm" style="display:none" novalidate>
                 <label>Full name<input type="text" id="registerStudentName" name="full_name" required maxlength="150" placeholder="Your registered full name" autocomplete="name"></label>
                 <label>Student email<input type="email" id="registerStudentEmail" name="email" required maxlength="100" placeholder="student@college.edu" autocomplete="email"></label>

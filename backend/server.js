@@ -1151,21 +1151,45 @@ app.post('/api/votes', async (req, res) => {
             candidate_id
         } = req.body;
 
-        const studentId = Number(student_id);
+        // The authenticated session is the source of truth for voter identity.
+        const studentId = Number(req.auth?.id);
+        const requestedStudentId = student_id === undefined || student_id === null || student_id === ''
+            ? studentId
+            : Number(student_id);
         const electionId = Number(election_id);
         const positionId = Number(position_id);
         const candidateId = Number(candidate_id);
 
-        // Validate IDs
+        if (!Number.isInteger(studentId) || studentId <= 0) {
+            return res.status(401).json({
+                success: false,
+                message: 'A valid student session is required to vote.'
+            });
+        }
+
+        if (!Number.isInteger(requestedStudentId) || requestedStudentId <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Student ID must be a positive integer.'
+            });
+        }
+
+        if (requestedStudentId !== studentId) {
+            return res.status(403).json({
+                success: false,
+                message: 'You can only vote using your own student account.'
+            });
+        }
+
+        // Validate election, position, and candidate IDs.
         if (
-            !Number.isInteger(studentId) || studentId <= 0 ||
             !Number.isInteger(electionId) || electionId <= 0 ||
             !Number.isInteger(positionId) || positionId <= 0 ||
             !Number.isInteger(candidateId) || candidateId <= 0
         ) {
             return res.status(400).json({
                 success: false,
-                message: 'Valid student, election, position, and candidate IDs are required.'
+                message: 'Valid election, position, and candidate IDs are required.'
             });
         }
 

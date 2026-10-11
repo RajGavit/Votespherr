@@ -1550,6 +1550,65 @@ $("#exportVoters")?.addEventListener("click", () => {
 $("#chartRange")?.addEventListener("change", () => renderVotingActivityChart());
 $("#resultElection")?.addEventListener("change", () => renderResults());
 
+// Student registration is available only to students already added by an administrator.
+function setStudentAuthMode(mode) {
+  const registering = mode === "register";
+  if ($("#studentLoginForm")) $("#studentLoginForm").style.display = registering ? "none" : "";
+  if ($("#studentRegisterForm")) $("#studentRegisterForm").style.display = registering ? "" : "none";
+  if ($("#loginError")) $("#loginError").textContent = "";
+  if ($("#registerError")) $("#registerError").textContent = "";
+  if ($("#studentLoginForm")) $("#studentLoginForm").reset();
+  if ($("#studentRegisterForm")) $("#studentRegisterForm").reset();
+}
+
+$("#showStudentRegister")?.addEventListener("click", () => setStudentAuthMode("register"));
+$("#showStudentLogin")?.addEventListener("click", () => setStudentAuthMode("login"));
+
+$("#studentRegisterForm")?.addEventListener("submit", async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const errorBox = $("#registerError");
+  const submitButton = form.querySelector('button[type="submit"]');
+  const full_name = $("#registerStudentName").value.trim();
+  const email = $("#registerStudentEmail").value.trim();
+  const password = $("#registerStudentPassword").value;
+  const confirmation = $("#registerStudentPasswordConfirm").value;
+  errorBox.textContent = "";
+
+  if (password.length < 8) {
+    errorBox.textContent = "Password must contain at least 8 characters.";
+    return;
+  }
+  if (password !== confirmation) {
+    errorBox.textContent = "The passwords do not match.";
+    return;
+  }
+
+  submitButton.disabled = true;
+  submitButton.textContent = "Creating account...";
+  try {
+    const response = await fetch(`${API_BASE}/api/students/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ full_name, email, password })
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.message || "Could not create student account.");
+    form.reset();
+    setStudentAuthMode("login");
+    if ($("#studentEmail")) $("#studentEmail").value = email;
+    toast("Account created. Sign in using your new password.");
+    if ($("#loginError")) $("#loginError").textContent = "Account created successfully. You can now sign in.";
+  } catch (error) {
+    errorBox.textContent = error.message === "Failed to fetch"
+      ? "Cannot connect to the server. Please try again."
+      : error.message;
+  } finally {
+    submitButton.disabled = false;
+    submitButton.innerHTML = 'Create student account <span>→</span>';
+  }
+});
+
 // Student login is authenticated by the backend; passwords are never checked in the browser.
 $("#studentLoginForm")?.addEventListener("submit", async event => {
   event.preventDefault();

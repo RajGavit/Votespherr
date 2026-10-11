@@ -192,7 +192,7 @@ app.post('/api/students', async (req, res) => {
         if (!name || name.length > 150) {
             return res.status(400).json({ success: false, message: 'Full name is required and must be at most 150 characters.' });
         }
-        if (!normalizedEmail || normalizedEmail.length > 100 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(normalizedEmail)) {
+        if (!normalizedEmail || normalizedEmail.length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
             return res.status(400).json({ success: false, message: 'Please provide a valid email address.' });
         }
         if (normalizedDepartment.length > 100) {

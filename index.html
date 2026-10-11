@@ -63,12 +63,11 @@
       <div class="sidebar-bottom">
         <div class="help-card">
           <div class="help-icon">✦</div><strong>Need a hand?</strong>
-          <p>Explore the demo or reach your election team.</p><button id="helpBtn">View help <span>↗</span></button>
+          <p>Manage elections, positions and student voting from one place.</p><button id="helpBtn">View help <span>↗</span></button>
         </div>
         <div class="profile-row">
-          <div class="avatar admin-avatar">AD</div>
-          <div class="profile-info"><strong>Admin Demo</strong><span>Election administrator</span></div><button
-            class="more-btn" aria-label="More profile options">•••</button>
+          <div class="avatar admin-avatar">A</div>
+          <div class="profile-info"><strong>Administrator</strong><span>Election administrator</span></div>
         </div>
       </div>
     </aside>
@@ -77,9 +76,8 @@
       <header class="topbar">
         <button class="mobile-menu" id="menuBtn" aria-label="Open menu">☰</button>
         <div class="breadcrumb"><span>Workspace</span><b>/</b><strong id="crumbTitle">Overview</strong></div>
-        <div class="top-actions"><span class="demo-pill"><i></i> DEMO MODE</span><button class="icon-button"
-            id="notificationBtn" aria-label="Notifications">♧<span class="notification-dot"></span></button>
-          <div class="top-avatar">AD</div><button class="secondary-btn auth-logout" id="logoutBtn" type="button">Log out</button>
+        <div class="top-actions">
+          <button class="secondary-btn auth-logout" id="logoutBtn" type="button">Log out</button>
         </div>
       </header>
 
@@ -320,7 +318,7 @@
             <div class="panel-header">
               <div>
                 <h2>Voter directory</h2>
-                <p>Sample student records for the interface demo.</p>
+                <p>Registered students and their voting status.</p>
               </div><button class="secondary-btn" id="exportVoters">↓ Export CSV</button>
             </div>
             <div class="table-wrap">
@@ -440,14 +438,14 @@
               <p>Sign in with a registered student account. Your credentials are checked by the backend.</p>
               <form id="studentLoginForm"><label>Student email<input type="email" id="studentEmail" required
                     placeholder="student@college.edu" autocomplete="username"></label><label>Password<input
-                    type="password" id="studentPassword" required placeholder="Enter any demo password"
+                    type="password" id="studentPassword" required placeholder="Enter your password"
                     autocomplete="current-password" minlength="4"></label>
                 <div class="login-options"><label class="check-label"><input type="checkbox" id="rememberStudent">
-                    Remember me</label><span>Demo access</span></div><button class="primary-btn login-submit"
+                    Remember me</label><span>Secure student access</span></div><button class="primary-btn login-submit"
                   type="submit">Sign in to portal <span>→</span></button>
                 <div class="login-error" id="loginError" aria-live="polite"></div>
               </form>
-              <div class="login-foot">Academic prototype · Authentication handled by local API</div>
+              <div class="login-foot">Secure sign-in · Credentials verified by the server</div>
             </div>
           </div>
         </div>

@@ -646,8 +646,12 @@ function emptyRow(columns, message = "No matching records found") {
   return `<tr><td colspan="${columns}"><div class="empty-state"><strong>${message}</strong>Try changing your search or filters.</div></td></tr>`;
 }
 
+function effectiveElectionStatus(election) {
+  return String(election.computed_status || election.status || "upcoming").toLowerCase();
+}
+
 function normalizeElection(election) {
-  const statusRaw = String(election.status || "upcoming").toLowerCase();
+  const statusRaw = effectiveElectionStatus(election);
   const endRaw = election.end || election.end_time || "";
   let formattedEnd = "—";
 
@@ -722,7 +726,7 @@ function renderOverview() {
   if (totalVoters) totalVoters.textContent = voters.length.toLocaleString();
   if (activeElections) {
     activeElections.textContent = elections.filter(election => {
-      const status = String(election.status || "").toLowerCase();
+      const status = effectiveElectionStatus(election);
       return status === "live" || status === "active" || status === "upcoming";
     }).length;
   }
@@ -744,7 +748,7 @@ function renderElections() {
 
   const list = elections.filter(election => {
     const item = normalizeElection(election);
-    const status = String(election.status || "upcoming").toLowerCase();
+    const status = effectiveElectionStatus(election);
     const matchesStatus = filter === "all"
       || status === filter
       || (filter === "live" && (status === "active" || status === "live"));
@@ -1151,7 +1155,6 @@ $$("[data-go]").forEach(button => button.addEventListener("click", () => showVie
 
 $("#menuBtn")?.addEventListener("click", () => $("#sidebar")?.classList.toggle("open"));
 $("#helpBtn")?.addEventListener("click", () => $("#helpDialog")?.showModal());
-$("#notificationBtn")?.addEventListener("click", () => toast("You’re all caught up — no new notifications."));
 
 function resetElectionForm() {
   const form = $("#electionForm");
@@ -1365,7 +1368,7 @@ fetch(`${API_BASE}/api/elections/${id}`, {
   const candidateButton = event.target.closest("[data-candidate]");
   if (candidateButton) {
     const item = candidates.find(candidate => String(candidate.id) === candidateButton.dataset.candidate);
-    if (item) toast(`${item.name} · ${item.position} · ${item.votes} votes (demo data)`);
+    if (item) toast(`${item.name} · ${item.position} · ${item.status}`);
   }
 
   const complaintButton = event.target.closest("[data-complaint]");
@@ -1451,7 +1454,7 @@ $("#studentLoginForm")?.addEventListener("submit", async event => {
 
 function getActiveElection() {
   return elections.find(election => {
-    const status = String(election.status || "").toLowerCase();
+    const status = effectiveElectionStatus(election);
     return status === "active" || status === "live";
   }) || null;
 }
@@ -1460,7 +1463,7 @@ function getBallotPreviewElection() {
   const active = getActiveElection();
   if (active) return active;
   return elections
-    .filter(election => String(election.status || "").toLowerCase() === "upcoming")
+    .filter(election => effectiveElectionStatus(election) === "upcoming")
     .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))[0] || null;
 }
 
@@ -1486,7 +1489,7 @@ async function renderBallot() {
     ballotPositions = await loadPositionsForElection(ballotElectionId);
     if (!activeElection && ballotPositions.length === 0) {
       const upcomingElections = elections
-        .filter(item => String(item.status || "").toLowerCase() === "upcoming")
+        .filter(item => effectiveElectionStatus(item) === "upcoming")
         .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
       for (const upcomingElection of upcomingElections) {
         if (Number(upcomingElection.election_id) === ballotElectionId) continue;
@@ -1705,7 +1708,6 @@ function applyAuthenticatedRole(role,user){
   const secondaryLabel=$(".sidebar .secondary-label");
   const nav=$(".sidebar .nav-list");
   const brandCaption=$(".sidebar .brand small");
-  const topAvatar=$(".top-avatar");
   const sidebarAvatar=$("#sidebar .admin-avatar");
   const profileName=$("#sidebar .profile-info strong");
   const profileRole=$("#sidebar .profile-info span");
@@ -1722,7 +1724,6 @@ function applyAuthenticatedRole(role,user){
     if(profileName)profileName.textContent=name;
     if(profileRole)profileRole.textContent="Student portal";
     if(sidebarAvatar)sidebarAvatar.textContent=initials;
-    if(topAvatar)topAvatar.textContent=initials;
     showView("cast-vote");
     loadElections();loadCandidates();
   }else{
@@ -1734,8 +1735,7 @@ function applyAuthenticatedRole(role,user){
     if(brandCaption)brandCaption.textContent="CAMPUS ELECTIONS";
     if(profileName)profileName.textContent="Administrator";
     if(profileRole)profileRole.textContent=user.email||"Election administrator";
-    if(sidebarAvatar)sidebarAvatar.textContent="AD";
-    if(topAvatar)topAvatar.textContent="AD";
+    if(sidebarAvatar)sidebarAvatar.textContent="A";
     showView("overview");
     loadElections();loadCandidates();loadVoters();
   }

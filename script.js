@@ -533,6 +533,8 @@ let studentSignedIn = false;
 let ballotSubmitted = false;
 let editingElectionId = null;
 let currentStudentId = null;
+let currentRole = null;
+let currentUser = null;
 
 // Selections are keyed by database position_id so any number of positions is supported.
 const selections = Object.create(null);
@@ -1095,6 +1097,10 @@ const viewMeta = {
 
 function showView(view) {
   if (!viewMeta[view]) return;
+  if (!currentRole) { document.body.classList.add("auth-required"); return; }
+  const adminViews = ["overview", "elections", "candidates", "voters", "results", "complaints"];
+  if (currentRole === "student" && adminViews.includes(view)) { toast("This section is available to administrators only."); view = "cast-vote"; }
+  if (currentRole === "admin" && ["student-login", "cast-vote"].includes(view)) { toast("Student sign-in is required to access the ballot."); view = "overview"; }
   if (view === "cast-vote" && !studentSignedIn) {
     toast("Please sign in to the student portal first.");
     view = "student-login";
@@ -1420,6 +1426,7 @@ $("#studentLoginForm")?.addEventListener("submit", async event => {
     const student = data.student;
     currentStudentId = Number(student.student_id);
     studentSignedIn = true;
+    applyAuthenticatedRole("student", student);
     const fullName = student.full_name || student.name || email.split("@")[0];
     if ($("#pageTitle")) $("#pageTitle").textContent = `Welcome, ${fullName}`;
     if ($("#sidebar .profile-info strong")) $("#sidebar .profile-info strong").textContent = fullName;
@@ -1688,14 +1695,36 @@ $("#confirmVoteForm")?.addEventListener("submit", async event => {
   }
 });
 
-// Initial rendering. Data-backed elections refresh when the API responds.
-renderOverview();
-renderElections();
-renderCandidates();
-renderVoters();
-renderResults();
-renderComplaints();
-renderBallot();
-loadElections();
-loadCandidates();
-loadVoters();
+function applyAuthenticatedRole(role,user){
+  currentRole=role;currentUser=user||{};document.body.classList.remove("auth-required","admin-role","student-role");document.body.classList.add(role+"-role");if($("#authGate"))$("#authGate").style.display="none";
+  if(role==="student"){studentSignedIn=true;currentStudentId=Number(user.student_id);const name=user.full_name||user.name||user.email||"Student";
+    if($("#sidebar .profile-info strong"))$("#sidebar .profile-info strong").textContent=name;
+    if($("#sidebar .profile-info span"))$("#sidebar .profile-info span").textContent="Student portal";
+    if($("#sidebar .admin-avatar"))$("#sidebar .admin-avatar").textContent=name.split(/\\s+/).map(p=>p[0]).join("").slice(0,2).toUpperCase();
+    showView("cast-vote");loadElections();loadCandidates();
+  }else{studentSignedIn=false;currentStudentId=null;
+    if($("#sidebar .profile-info strong"))$("#sidebar .profile-info strong").textContent="Administrator";
+    if($("#sidebar .profile-info span"))$("#sidebar .profile-info span").textContent=user.email||"Election administrator";
+    showView("overview");loadElections();loadCandidates();loadVoters();
+  }
+}
+$("#adminLoginForm")?.addEventListener("submit",async event=>{
+  event.preventDefault();const error=$("#adminLoginError"),button=event.currentTarget.querySelector('button[type="submit"]');error.textContent="";button.disabled=true;button.textContent="Signing in...";
+  try{const response=await fetch(`${API_BASE}/api/admin/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("#adminLoginEmail").value.trim(),password:$("#adminLoginPassword").value})});
+    const data=await response.json();if(!response.ok||!data.success)throw new Error(data.message||"Admin login failed.");applyAuthenticatedRole("admin",data.user);toast("Admin login successful.");
+  }catch(error){$("#adminLoginError").textContent=error.message==="Failed to fetch"?"Cannot connect to the server.":error.message;}
+  finally{button.disabled=false;button.textContent="Open admin workspace →";}
+});
+$("#gateStudentLoginForm")?.addEventListener("submit",async event=>{
+  event.preventDefault();const error=$("#gateStudentLoginError"),button=event.currentTarget.querySelector('button[type="submit"]');error.textContent="";button.disabled=true;button.textContent="Signing in...";
+  try{const response=await fetch(`${API_BASE}/api/students/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("#gateStudentEmail").value.trim(),password:$("#gateStudentPassword").value})});
+    const data=await response.json();if(!response.ok||!data.success)throw new Error(data.message||"Student login failed.");applyAuthenticatedRole("student",data.student);toast("Student login successful.");
+  }catch(error){$("#gateStudentLoginError").textContent=error.message==="Failed to fetch"?"Cannot connect to the server.":error.message;}
+  finally{button.disabled=false;button.textContent="Open student portal →";}
+});
+$("#logoutBtn")?.addEventListener("click",async()=>{try{await fetch(`${API_BASE}/api/logout`,{method:"POST"});}catch(error){console.warn("Logout request failed",error);}
+  currentRole=null;currentUser=null;currentStudentId=null;studentSignedIn=false;document.body.classList.remove("admin-role","student-role");document.body.classList.add("auth-required");if($("#authGate"))$("#authGate").style.display="grid";
+  if($("#adminLoginPassword"))$("#adminLoginPassword").value="";if($("#gateStudentPassword"))$("#gateStudentPassword").value="";
+});
+async function initializeAuthentication(){try{const response=await fetch(`${API_BASE}/api/auth/me`);const data=await response.json();if(response.ok&&data.success){applyAuthenticatedRole(data.role,data.user);return;}}catch(error){console.warn("No existing authenticated session.",error);}document.body.classList.add("auth-required");}
+initializeAuthentication();

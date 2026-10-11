@@ -14,7 +14,28 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 
-<body>
+<body class="auth-required">
+<section id="authGate" class="auth-gate" aria-label="VoteSphere sign in">
+  <div class="auth-gate-card">
+    <div class="eyebrow">VOTESPHERE · SECURE ACCESS</div><h1>Welcome to VoteSphere</h1>
+    <p class="auth-subtitle">Sign in to open your workspace. Administrator and student access are separate.</p>
+    <div class="auth-columns">
+      <form id="adminLoginForm" class="auth-form"><h2>Administrator</h2>
+        <label>Admin email<input id="adminLoginEmail" type="email" required autocomplete="username" placeholder="admin@college.edu"></label>
+        <label>Password<input id="adminLoginPassword" type="password" required autocomplete="current-password" placeholder="Admin password"></label>
+        <div id="adminLoginError" class="login-error" aria-live="polite"></div>
+        <button class="primary-btn login-submit" type="submit">Open admin workspace →</button>
+      </form>
+      <form id="gateStudentLoginForm" class="auth-form"><h2>Student</h2>
+        <label>Student email<input id="gateStudentEmail" type="email" required autocomplete="username" placeholder="student@college.edu"></label>
+        <label>Password<input id="gateStudentPassword" type="password" required autocomplete="current-password" placeholder="Student password"></label>
+        <div id="gateStudentLoginError" class="login-error" aria-live="polite"></div>
+        <button class="primary-btn login-submit" type="submit">Open student portal →</button>
+        <p class="auth-note">Student accounts must match a pre-registered student record.</p>
+      </form>
+    </div>
+  </div>
+</section>
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
       <a class="brand" href="#" aria-label="VoteSphere home">
@@ -58,7 +79,7 @@
         <div class="breadcrumb"><span>Workspace</span><b>/</b><strong id="crumbTitle">Overview</strong></div>
         <div class="top-actions"><span class="demo-pill"><i></i> DEMO MODE</span><button class="icon-button"
             id="notificationBtn" aria-label="Notifications">♧<span class="notification-dot"></span></button>
-          <div class="top-avatar">AD</div>
+          <div class="top-avatar">AD</div><button class="secondary-btn auth-logout" id="logoutBtn" type="button">Log out</button>
         </div>
       </header>
 

@@ -181,6 +181,50 @@ app.get('/api/students', async (req, res) => {
     }
 });
 
+app.post('/api/students', async (req, res) => {
+    try {
+        const { full_name, email, department, year_of_study } = req.body || {};
+        const name = typeof full_name === 'string' ? full_name.trim() : '';
+        const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+        const normalizedDepartment = typeof department === 'string' ? department.trim() : '';
+        const year = year_of_study === '' || year_of_study == null ? null : Number(year_of_study);
+
+        if (!name || name.length > 150) {
+            return res.status(400).json({ success: false, message: 'Full name is required and must be at most 150 characters.' });
+        }
+        if (!normalizedEmail || normalizedEmail.length > 100 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(normalizedEmail)) {
+            return res.status(400).json({ success: false, message: 'Please provide a valid email address.' });
+        }
+        if (normalizedDepartment.length > 100) {
+            return res.status(400).json({ success: false, message: 'Department must be at most 100 characters.' });
+        }
+        if (year !== null && (!Number.isInteger(year) || year < 1 || year > 6)) {
+            return res.status(400).json({ success: false, message: 'Year of study must be between 1 and 6.' });
+        }
+
+        const [existing] = await db.execute('SELECT student_id FROM student WHERE email = ?', [normalizedEmail]);
+        if (existing.length) {
+            return res.status(409).json({ success: false, message: 'A student with this email already exists.' });
+        }
+
+        const [result] = await db.execute(
+            'INSERT INTO student (full_name, email, department, year_of_study, password_hash) VALUES (?, ?, ?, ?, NULL)',
+            [name, normalizedEmail, normalizedDepartment || null, year]
+        );
+        return res.status(201).json({
+            success: true,
+            message: 'Student record created. The student can now register using this name and email.',
+            student: { student_id: result.insertId, full_name: name, email: normalizedEmail, department: normalizedDepartment || null, year_of_study: year }
+        });
+    } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ success: false, message: 'A student with this email already exists.' });
+        }
+        console.error('Error creating student record:', error.message);
+        return res.status(500).json({ success: false, message: 'Failed to create student record.' });
+    }
+});
+
 app.post('/api/students/register', async (req, res) => {
     try {
         const {

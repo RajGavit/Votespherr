@@ -104,6 +104,10 @@ app.use('/api', (req,res,next) => {
     if(req.auth.role!=='student') return res.status(403).json({success:false,message:'A student account is required to vote.'});
     return next();
   }
+  if ((route==='/candidates' && method==='POST') || (route==='/candidates/mine' && method==='GET')) {
+    if(req.auth.role!=='student') return res.status(403).json({success:false,message:'A student account is required.'});
+    return next();
+  }
   if(req.auth.role!=='admin') return res.status(403).json({success:false,message:'Administrator access is required.'});
   next();
 });
@@ -976,86 +980,33 @@ app.get('/api/candidates', async (req, res) => {
 
 
 
-app.post('/api/candidates', async (req, res) => {
-    try {
-        const {
-            student_id,
-            election_id,
-            position_id,
-            manifesto
-        } = req.body;
-
-        // Validate required fields
-        if (
-            !Number.isInteger(Number(student_id)) ||
-            Number(student_id) <= 0 ||
-            !Number.isInteger(Number(election_id)) ||
-            Number(election_id) <= 0 ||
-            !Number.isInteger(Number(position_id)) ||
-            Number(position_id) <= 0
-        ) {
-            return res.status(400).json({
-                success: false,
-                message: 'Valid student_id, election_id, and position_id are required.'
-            });
-        }
-
-        // Confirm the position belongs to the selected election
-        const [positions] = await db.query(
-            `SELECT position_id
-             FROM \`position\`
-             WHERE position_id = ? AND election_id = ?`,
-            [Number(position_id), Number(election_id)]
-        );
-
-        if (positions.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'The selected position does not belong to this election.'
-            });
-        }
-
-        // Save the application; status defaults to pending
-        const [result] = await db.query(
-            `INSERT INTO candidate
-             (student_id, election_id, position_id, manifesto)
-             VALUES (?, ?, ?, ?)`,
-            [
-                Number(student_id),
-                Number(election_id),
-                Number(position_id),
-                manifesto?.trim() || null
-            ]
-        );
-
-        res.status(201).json({
-            success: true,
-            message: 'Candidate application submitted successfully.',
-            candidate_id: result.insertId
-        });
-
-    } catch (error) {
-        console.error('Error creating candidate application:', error);
-
-        if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-            return res.status(400).json({
-                success: false,
-                message: 'The selected student, election, or position does not exist.'
-            });
-        }
-
-        res.status(500).json({
-            success: false,
-            message: 'Failed to submit candidate application.'
-        });
-    }
+app.get('/api/candidates/mine', async (req, res) => {
+  try {
+    const [applications] = await db.query(`SELECT c.candidate_id, c.election_id, e.election_name, c.position_id, p.position_name, c.manifesto, c.status, c.created_at FROM candidate c JOIN election e ON e.election_id=c.election_id JOIN \`position\` p ON p.position_id=c.position_id WHERE c.student_id=? ORDER BY c.created_at DESC`, [Number(req.auth.id)]);
+    res.json({ success: true, applications });
+  } catch (error) { console.error('Error loading candidate applications:', error.message); res.status(500).json({ success: false, message: 'Failed to load your applications.' }); }
 });
-
-
-
-
-
-
+app.post('/api/candidates', async (req, res) => {
+  try {
+    const electionId = Number(req.body?.election_id), positionId = Number(req.body?.position_id), studentId = Number(req.auth.id);
+    const manifesto = typeof req.body?.manifesto === 'string' ? req.body.manifesto.trim() : '';
+    if (!Number.isInteger(electionId) || electionId <= 0 || !Number.isInteger(positionId) || positionId <= 0) return res.status(400).json({ success: false, message: 'Select a valid election and position.' });
+    if (manifesto.length > 2000) return res.status(400).json({ success: false, message: 'Manifesto must be 2000 characters or fewer.' });
+    const [elections] = await db.query(`SELECT election_id FROM election WHERE election_id=? AND LOWER(COALESCE(status,'')) NOT IN ('completed','cancelled') AND NOW()<start_time AND NOW()<=end_time`, [electionId]);
+    if (!elections.length) return res.status(400).json({ success: false, message: 'Applications are only allowed before the election starts.' });
+    const [positions] = await db.query('SELECT position_id FROM \`position\` WHERE position_id=? AND election_id=?', [positionId, electionId]);
+    if (!positions.length) return res.status(400).json({ success: false, message: 'That position does not belong to the selected election.' });
+    const [existing] = await db.query('SELECT candidate_id FROM candidate WHERE student_id=? AND election_id=? AND position_id=? LIMIT 1', [studentId, electionId, positionId]);
+    if (existing.length) return res.status(409).json({ success: false, message: 'You have already applied for this position in this election.' });
+    const [result] = await db.query('INSERT INTO candidate (student_id,election_id,position_id,manifesto) VALUES (?,?,?,?)', [studentId, electionId, positionId, manifesto || null]);
+    res.status(201).json({ success: true, message: 'Candidate application submitted successfully.', candidate_id: result.insertId });
+  } catch (error) {
+    console.error('Error creating candidate application:', error.message);
+    if (error.code === 'ER_NO_REFERENCED_ROW_2') return res.status(400).json({ success: false, message: 'The selected election or position does not exist.' });
+    if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ success: false, message: 'You have already applied for this position in this election.' });
+    res.status(500).json({ success: false, message: 'Failed to submit candidate application.' });
+  }
+});
 app.patch('/api/candidates/:id/status', async (req, res) => {
     try {
         const candidateId = Number(req.params.id);

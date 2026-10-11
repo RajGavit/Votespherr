@@ -489,6 +489,17 @@
 </div>
 
             </div>
+            <article class="panel candidate-application-panel" id="studentCandidateApplication">
+              <div class="panel-header"><div><h2>Apply to become a candidate</h2><p>Choose an upcoming election and position. Your application must be approved by the administrator before you can appear on the ballot.</p></div></div>
+              <form id="candidateApplicationForm" class="candidate-application-form">
+                <label>Election<select id="applicationElection" required><option value="">Choose an upcoming election</option></select></label>
+                <label>Position<select id="applicationPosition" required disabled><option value="">Choose an election first</option></select></label>
+                <label>Manifesto<textarea id="applicationManifesto" rows="4" maxlength="2000" placeholder="Explain your goals and what you plan to contribute (optional)."></textarea></label>
+                <div id="candidateApplicationMessage" class="login-error" aria-live="polite"></div>
+                <button class="primary-btn" id="submitCandidateApplication" type="submit">Submit application →</button>
+              </form>
+            </article>
+
             <div class="vote-layout">
               <div class="vote-main">
                 <div class="panel vote-election-heading">

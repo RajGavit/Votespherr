@@ -100,8 +100,8 @@ app.use('/api', (req,res,next) => {
   req.auth=verifySession(readCookie(req,SESSION_COOKIE));
   if (publicRoutes) return next();
   if (!req.auth) return res.status(401).json({success:false,message:'Please sign in to continue.'});
-  if (route==='/votes' || route==='/votes/batch') {
-    if(req.auth.role!=='student') return res.status(403).json({success:false,message:'A student account is required to vote.'});
+  if (route==='/votes' || route==='/votes/batch' || (route==='/candidates' && method==='POST')) {
+    if(req.auth.role!=='student') return res.status(403).json({success:false,message:'A student account is required for this action.'});
     return next();
   }
   if(req.auth.role!=='admin') return res.status(403).json({success:false,message:'Administrator access is required.'});
@@ -978,79 +978,54 @@ app.get('/api/candidates', async (req, res) => {
 
 app.post('/api/candidates', async (req, res) => {
     try {
-        const {
-            student_id,
-            election_id,
-            position_id,
-            manifesto
-        } = req.body;
+        const studentId = Number(req.auth?.id);
+        const electionId = Number(req.body?.election_id);
+        const positionId = Number(req.body?.position_id);
+        const manifesto = typeof req.body?.manifesto === 'string' ? req.body.manifesto.trim() : '';
 
-        // Validate required fields
-        if (
-            !Number.isInteger(Number(student_id)) ||
-            Number(student_id) <= 0 ||
-            !Number.isInteger(Number(election_id)) ||
-            Number(election_id) <= 0 ||
-            !Number.isInteger(Number(position_id)) ||
-            Number(position_id) <= 0
-        ) {
-            return res.status(400).json({
-                success: false,
-                message: 'Valid student_id, election_id, and position_id are required.'
-            });
+        if (!Number.isInteger(studentId) || studentId <= 0) {
+            return res.status(401).json({ success: false, message: 'A signed-in student account is required.' });
+        }
+        if (!Number.isInteger(electionId) || electionId <= 0 || !Number.isInteger(positionId) || positionId <= 0) {
+            return res.status(400).json({ success: false, message: 'Choose a valid election and position.' });
+        }
+        if (manifesto.length > 2000) {
+            return res.status(400).json({ success: false, message: 'Manifesto must be 2000 characters or fewer.' });
         }
 
-        // Confirm the position belongs to the selected election
-        const [positions] = await db.query(
-            `SELECT position_id
-             FROM \`position\`
-             WHERE position_id = ? AND election_id = ?`,
-            [Number(position_id), Number(election_id)]
-        );
-
-        if (positions.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'The selected position does not belong to this election.'
-            });
+        const [eligible] = await db.execute(`
+            SELECT e.election_id, p.position_id
+            FROM election e
+            JOIN `position` p ON p.election_id = e.election_id
+            WHERE e.election_id = ? AND p.position_id = ?
+              AND LOWER(e.status) NOT IN ('completed', 'cancelled')
+              AND NOW() < e.start_time
+        `, [electionId, positionId]);
+        if (!eligible.length) {
+            return res.status(400).json({ success: false, message: 'Applications are available only for positions in upcoming elections.' });
         }
 
-        // Save the application; status defaults to pending
-        const [result] = await db.query(
-            `INSERT INTO candidate
-             (student_id, election_id, position_id, manifesto)
-             VALUES (?, ?, ?, ?)`,
-            [
-                Number(student_id),
-                Number(election_id),
-                Number(position_id),
-                manifesto?.trim() || null
-            ]
+        const [existing] = await db.execute(
+            'SELECT candidate_id, status FROM candidate WHERE student_id = ? AND election_id = ? AND position_id = ? LIMIT 1',
+            [studentId, electionId, positionId]
         );
+        if (existing.length) {
+            return res.status(409).json({ success: false, message: 'You have already applied for this position in this election.' });
+        }
 
-        res.status(201).json({
-            success: true,
-            message: 'Candidate application submitted successfully.',
-            candidate_id: result.insertId
-        });
-
+        const [result] = await db.execute(
+            'INSERT INTO candidate (student_id, election_id, position_id, manifesto) VALUES (?, ?, ?, ?)',
+            [studentId, electionId, positionId, manifesto || null]
+        );
+        return res.status(201).json({ success: true, message: 'Candidate application submitted for administrator review.', candidate_id: result.insertId });
     } catch (error) {
-        console.error('Error creating candidate application:', error);
-
+        console.error('Error creating candidate application:', error.message);
         if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-            return res.status(400).json({
-                success: false,
-                message: 'The selected student, election, or position does not exist.'
-            });
+            return res.status(400).json({ success: false, message: 'The selected election or position does not exist.' });
         }
-
-        res.status(500).json({
-            success: false,
-            message: 'Failed to submit candidate application.'
-        });
+        return res.status(500).json({ success: false, message: 'Failed to submit candidate application.' });
     }
 });
-
 
 
 

@@ -1675,6 +1675,88 @@ function getBallotPreviewElection() {
     .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))[0] || null;
 }
 
+async function loadCandidateApplicationElections() {
+  const electionSelect = $("#applicationElection");
+  const positionSelect = $("#applicationPosition");
+  if (!electionSelect || !positionSelect) return;
+  electionSelect.innerHTML = '<option value="">Loading upcoming elections...</option>';
+  positionSelect.innerHTML = '<option value="">Choose an election first</option>';
+  positionSelect.disabled = true;
+  try {
+    const response = await fetch(`${API_BASE}/api/elections`);
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.message || "Could not load elections.");
+    const upcoming = (data.elections || []).filter(election => {
+      const status = String(election.computed_status || election.status || "").toLowerCase();
+      return status === "upcoming" && new Date(election.start_time) > new Date();
+    });
+    electionSelect.innerHTML = '<option value="">Choose an upcoming election</option>' + upcoming.map(election =>
+      `<option value="${Number(election.election_id)}">${escapeHtml(election.election_name)}</option>`
+    ).join("");
+    if (!upcoming.length) electionSelect.innerHTML = '<option value="">No upcoming elections accepting applications</option>';
+  } catch (error) {
+    electionSelect.innerHTML = '<option value="">Could not load elections</option>';
+    $("#candidateApplicationMessage").textContent = error.message;
+  }
+}
+
+$("#applicationElection")?.addEventListener("change", async event => {
+  const electionId = Number(event.currentTarget.value);
+  const positionSelect = $("#applicationPosition");
+  positionSelect.disabled = true;
+  positionSelect.innerHTML = '<option value="">Loading positions...</option>';
+  $("#candidateApplicationMessage").textContent = "";
+  if (!electionId) {
+    positionSelect.innerHTML = '<option value="">Choose an election first</option>';
+    return;
+  }
+  try {
+    const positions = await loadPositionsForElection(electionId);
+    positionSelect.innerHTML = positions.length
+      ? '<option value="">Choose a position</option>' + positions.map(position => `<option value="${Number(position.position_id)}">${escapeHtml(position.position_name)}</option>`).join("")
+      : '<option value="">No positions created for this election</option>';
+    positionSelect.disabled = !positions.length;
+  } catch (error) {
+    positionSelect.innerHTML = '<option value="">Could not load positions</option>';
+    $("#candidateApplicationMessage").textContent = error.message;
+  }
+});
+
+$("#candidateApplicationForm")?.addEventListener("submit", async event => {
+  event.preventDefault();
+  const message = $("#candidateApplicationMessage");
+  const button = $("#submitCandidateApplication");
+  message.textContent = "";
+  if (currentRole !== "student") {
+    message.textContent = "Sign in with a student account to apply.";
+    return;
+  }
+  button.disabled = true;
+  button.textContent = "Submitting application...";
+  try {
+    const response = await fetch(`${API_BASE}/api/candidates`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        election_id: Number($("#applicationElection").value),
+        position_id: Number($("#applicationPosition").value),
+        manifesto: $("#applicationManifesto").value.trim()
+      })
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.message || "Could not submit application.");
+    message.textContent = "Application submitted. It will appear after the administrator reviews it.";
+    $("#candidateApplicationForm").reset();
+    await loadCandidateApplicationElections();
+    await loadCandidates();
+  } catch (error) {
+    message.textContent = error.message === "Failed to fetch" ? "Cannot connect to the server. Please try again." : error.message;
+  } finally {
+    button.disabled = false;
+    button.textContent = "Submit application →";
+  }
+});
+
 async function renderBallot() {
   const ballotContainer = $("#ballotPositions");
   if (!ballotContainer || ballotSubmitted || ballotLoading) return;

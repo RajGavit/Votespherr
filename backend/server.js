@@ -960,6 +960,8 @@ app.get('/api/candidates', async (req, res) => {
                 ON c.election_id = e.election_id
             JOIN \`position\` p
                 ON c.position_id = p.position_id
+            WHERE LOWER(COALESCE(e.status, '')) NOT IN ('completed', 'cancelled')
+              AND NOW() <= e.end_time
             ORDER BY c.created_at DESC
         `);
 

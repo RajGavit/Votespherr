@@ -161,7 +161,8 @@
 // function renderVoters() { const q = $("#voterSearch").value.toLowerCase(), f = $("#voterFilter").value, list = voters.filter(v => (f === "all" || v.status === f) && `${v.name} ${v.id} ${v.branch}`.toLowerCase().includes(q)); $("#votersRows").innerHTML = list.length ? list.map(v => `<tr><td><div class="table-name">${avatar(v.initials)}<span>${v.name}<small>Student voter</small></span></div></td><td>${v.id}</td><td>${v.branch}</td><td>${v.year}</td><td>${statusPill(v.status === "Verified" ? "live" : "upcoming").replace("live", "Verified").replace("upcoming", "Pending")}</td><td>${v.voted === "Yes" ? '<span class="status-pill completed">Yes</span>' : '<span style="color:#a1aaba">Not yet</span>'}</td></tr>`).join("") : emptyRow(6, voters.length ? "No matching voter records" : "No voter records yet"); }
 // function renderResults() { const sorted = [...candidates.filter(c => c.position === "President")].sort((a, b) => b.votes - a.votes), max = sorted.length ? Math.max(...sorted.map(c => c.votes)) : 1; $("#presidentResults").innerHTML = sorted.length ? sorted.map((c, i) => `<div><div class="result-row-head"><span>${i === 0 ? "🏆 " : ""}${c.name}</span><strong>${c.votes.toLocaleString()} votes · ${Math.round(c.votes / (sorted.reduce((s, x) => s + x.votes, 0) || 1) * 100)}%</strong></div><div class="result-track"><span class="${i === 1 ? "runner" : i > 1 ? "third" : ""}" style="width:${c.votes / max * 100}%"></span></div></div>`).join("") : `<div class="empty-state"><strong>No results available yet</strong>Results will appear after an election has votes.</div>`; }
 // function renderComplaints() { const q = $("#complaintSearch").value.toLowerCase(), f = $("#complaintFilter").value, list = complaints.filter(c => (f === "all" || c.status === f) && `${c.id} ${c.desc} ${c.student}`.toLowerCase().includes(q)); $("#complaintsRows").innerHTML = list.length ? list.map(c => `<tr><td><div class="table-name"><span class="mini-avatar orange">⚑</span><span>${c.id}<small class="complaint-desc">${c.desc}</small></span></div></td><td>${c.student}</td><td>${c.election}</td><td>${c.date}</td><td><span class="status-pill ${c.status === "Pending" ? "upcoming" : "live"}">${c.status}</span></td><td><button class="row-action" data-complaint="${c.id}" ${c.status === "Resolved" ? "disabled" : ""}>${c.status === "Resolved" ? "Resolved" : "Resolve"}</button></td></tr>`).join("") : emptyRow(6, complaints.length ? "No matching complaints" : "No complaints submitted yet"); const pending = complaints.filter(c => c.status === "Pending").length; $("#pendingComplaintCount").textContent = String(pending).padStart(2, "0"); $("#complaintStatusTag").textContent = `${pending} need attention`; }
-// const viewMeta = { overview: ["Overview", "ADMIN WORKSPACE", "Good morning, Admin ✦", "Here's what's happening with your campus elections today."], elections: ["Elections", "ELECTION MANAGEMENT", "Election management", "Create, schedule and monitor campus elections."], candidates: ["Candidates", "CANDIDATE DIRECTORY", "Meet the candidates", "Browse candidates, their positions and manifestos."], voters: ["Voters", "VOTER MANAGEMENT", "Voter directory", "Review student registration and voting eligibility."], results: ["Results", "RESULTS & ANALYTICS", "Election results", "Explore turnout, candidate performance and election summaries."], complaints: ["Complaints", "COMPLAINT MANAGEMENT", "Complaints & reports", "Review election-related concerns submitted by students."], "student-login": ["Student login", "STUDENT PORTAL", "Welcome to your campus", "Sign in to preview the student election portal."], "cast-vote": ["Cast vote", "STUDENT PORTAL", "Cast your vote", "Review the ballot and make your demo selections."] };
+// const viewMeta = { overview: ["Overview", "ADMIN WORKSPACE", "Good morning, Admin ✦", "Here's what's happening with your campus elections today."], elections: ["Elections", "ELECTION MANAGEMENT", "Election management", "Create, schedule and monitor campus elections."], candidates: ["Candidates", "CANDIDATE DIRECTORY", "Meet the candidates", "Browse candidates, their positions and manifestos."], voters: ["Voters", "VOTER MANAGEMENT", "Voter directory", "Review student registration and voting eligibility."], results: ["Results", "RESULTS & ANALYTICS", "Election results", "Explore turnout, candidate performance and election summaries."], complaints: ["Complaints", "COMPLAINT MANAGEMENT", "Complaints & reports", "Review election-related concerns submitted by students."], "student-login": ["Student login", "STUDENT PORTAL", "Welcome to your campus", "Sign in to preview the student election portal."], "cast-vote": ["Cast vote", "STUDENT PORTAL", "Cast your vote", "Review the ballot and make your demo selections."],
+  "candidate-apply": ["Candidate application", "STUDENT PORTAL", "Apply as a candidate", "Submit an application and track its review status."] };
 
 
 // function showView(view) { if (!viewMeta[view]) return; if (view === "cast-vote" && !studentSignedIn) { toast("Please sign in to the student portal first."); view = "student-login" } $$(".view").forEach(v => v.classList.toggle("active", v.id === `view-${view}`)); $$(".nav-item").forEach(b => b.classList.toggle("active", b.dataset.view === view)); const [crumb, eyebrow, title, sub] = viewMeta[view]; $("#crumbTitle").textContent = crumb; $("#pageEyebrow").textContent = eyebrow; $("#pageTitle").textContent = title; $("#pageSubtitle").textContent = sub; $("#globalHeading").style.display = view === "student-login" || view === "cast-vote" ? "none" : "flex"; $("#createElectionBtn").style.display = view === "elections" || view === "overview" ? "inline-flex" : "none"; if (view === "elections") renderElections(); if (view === "candidates") renderCandidates(); if (view === "voters") renderVoters(); if (view === "results") renderResults(); if (view === "complaints") renderComplaints(); if (view === "cast-vote") renderBallot(); $("#sidebar").classList.remove("open"); window.scrollTo({ top: 0, behavior: "smooth" }); }
@@ -1211,6 +1212,7 @@ function showView(view) {
   if (!viewMeta[view]) return;
   if (!currentRole) { document.body.classList.add("auth-required"); return; }
   const adminViews = ["overview", "elections", "candidates", "voters", "results", "complaints"];
+  if (currentRole === "student" && view === "candidate-apply") { loadApplicationElections(); loadMyCandidateApplications(); }
   if (currentRole === "student" && adminViews.includes(view)) { toast("This section is available to administrators only."); view = "cast-vote"; }
   if (currentRole === "admin" && ["student-login", "cast-vote"].includes(view)) { toast("Student sign-in is required to access the ballot."); view = "overview"; }
   if (view === "cast-vote" && !studentSignedIn) {
@@ -1904,6 +1906,55 @@ $("#confirmVoteForm")?.addEventListener("submit", async event => {
   } finally {
     if (submitButton) { submitButton.disabled = false; submitButton.textContent = "Submit vote"; }
   }
+});
+
+
+async function loadApplicationElections() {
+  const select = $("#applicationElection"), pos = $("#applicationPosition");
+  if (!select || !pos) return;
+  try {
+    const response = await fetch(API_BASE + "/api/elections"), data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.message || "Could not load elections.");
+    const list = (data.elections || []).filter(e => String(e.computed_status || e.status || "").toLowerCase() === "upcoming" && new Date(e.start_time) > new Date());
+    select.innerHTML = '<option value="">Select an election</option>';
+    list.forEach(e => { const o = document.createElement("option"); o.value = e.election_id; o.textContent = e.election_name; select.appendChild(o); });
+    if (!list.length) select.innerHTML = '<option value="">No upcoming elections</option>';
+  } catch (error) { select.innerHTML = '<option value="">Could not load elections</option>'; $("#candidateApplicationError").textContent = error.message; }
+}
+$("#applicationElection")?.addEventListener("change", async event => {
+  const select = $("#applicationPosition"); select.disabled = true;
+  select.innerHTML = '<option value="">Loading positions...</option>';
+  if (!event.target.value) { select.innerHTML = '<option value="">Select an election first</option>'; return; }
+  try {
+    const positions = await loadPositionsForElection(event.target.value);
+    select.innerHTML = '<option value="">Select a position</option>';
+    positions.forEach(p => { const o = document.createElement("option"); o.value = p.position_id; o.textContent = p.position_name; select.appendChild(o); });
+    if (!positions.length) select.innerHTML = '<option value="">No positions configured</option>';
+    select.disabled = !positions.length;
+  } catch (error) { select.innerHTML = '<option value="">Could not load positions</option>'; $("#candidateApplicationError").textContent = error.message; }
+});
+async function loadMyCandidateApplications() {
+  const tbody = $("#myCandidateApplications"); if (!tbody) return;
+  try {
+    const response = await fetch(API_BASE + "/api/candidates/mine"), data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.message || "Could not load applications.");
+    const rows = data.applications || [];
+    tbody.innerHTML = rows.length ? rows.map(a => '<tr><td>' + escapeHtml(a.election_name) + '</td><td>' + escapeHtml(a.position_name) + '</td><td>' + escapeHtml(a.status) + '</td></tr>').join("") : '<tr><td colspan="3">You have not submitted any applications yet.</td></tr>';
+  } catch (error) { tbody.innerHTML = '<tr><td colspan="3">' + escapeHtml(error.message) + '</td></tr>'; }
+}
+$("#candidateApplicationForm")?.addEventListener("submit", async event => {
+  event.preventDefault();
+  const button = event.currentTarget.querySelector('button[type="submit"]'), error = $("#candidateApplicationError");
+  error.textContent = "";
+  const election_id = Number($("#applicationElection").value), position_id = Number($("#applicationPosition").value), manifesto = $("#applicationManifesto").value.trim();
+  if (!election_id || !position_id) { error.textContent = "Select an election and position."; return; }
+  button.disabled = true; button.textContent = "Submitting application...";
+  try {
+    const response = await fetch(API_BASE + "/api/candidates", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({election_id,position_id,manifesto})});
+    const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.message || "Could not submit application.");
+    $("#applicationManifesto").value = ""; toast("Application submitted for admin review."); await loadMyCandidateApplications(); await loadCandidates();
+  } catch (err) { error.textContent = err.message || "Could not submit application."; }
+  finally { button.disabled = false; button.textContent = "Submit application →"; }
 });
 
 function applyAuthenticatedRole(role,user){

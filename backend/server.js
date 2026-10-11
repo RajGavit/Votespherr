@@ -223,7 +223,7 @@ const hashedPassword = await bcrypt.hash(password, 12);
 
 
 const [result] = await db.execute(
-    `INSERT INTO STUDENT
+    `INSERT INTO student
         (full_name, email, password_hash, department, year_of_study)
      VALUES (?, ?, ?, ?, ?)`,
     [
@@ -449,7 +449,7 @@ if (end <= start) {
 
 
         const [result] = await db.execute(
-            `INSERT INTO ELECTION
+            `INSERT INTO election
              (election_name, description, start_time, end_time)
              VALUES (?, ?, ?, ?)`,
             [
@@ -603,7 +603,7 @@ if (new Date(existingElection.start_time) <= new Date()) {
 
 
         const [result] = await db.execute(
-            `UPDATE ELECTION
+            `UPDATE election
              SET election_name = ?,
                  description = ?,
                  start_time = ?,
@@ -694,14 +694,14 @@ const [voteCount] = await db.execute(
 
 const [positionCount] = await db.execute(
     `SELECT COUNT(*) AS total
-     FROM \`POSITION\`
+     FROM \`position\`
      WHERE election_id = ?`,
     [electionId]
 );
 
 const [candidateCount] = await db.execute(
     `SELECT COUNT(*) AS total
-     FROM CANDIDATE
+     FROM candidate
      WHERE election_id = ?`,
     [electionId]
 );
@@ -715,7 +715,7 @@ const [resultCount] = await db.execute(
 
 const [complaintCount] = await db.execute(
     `SELECT COUNT(*) AS total
-     FROM COMPLAINT
+     FROM complaint
      WHERE election_id = ?`,
     [electionId]
 );
@@ -792,8 +792,8 @@ app.get('/api/positions', async (req, res) => {
         const [positions] = await db.execute(`
             SELECT p.position_id, p.election_id, p.position_name, p.description,
                    e.election_name, e.start_time, e.end_time
-            FROM \`POSITION\` p
-            JOIN ELECTION e ON e.election_id = p.election_id
+            FROM \`position\` p
+            JOIN election e ON e.election_id = p.election_id
             ${where}
             ORDER BY p.election_id DESC, p.position_id ASC
         `, params);
@@ -830,7 +830,7 @@ app.post('/api/positions', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Election not found or has already started.' });
         }
         const [result] = await db.execute(
-            'INSERT INTO `POSITION` (election_id, position_name, description) VALUES (?, ?, ?)',
+            'INSERT INTO `position` (election_id, position_name, description) VALUES (?, ?, ?)',
             [electionId, name, details || null]
         );
         res.status(201).json({ success: true, message: 'Position created successfully.', position_id: result.insertId });
@@ -858,12 +858,12 @@ app.get('/api/candidates', async (req, res) => {
                 c.manifesto,
                 c.status,
                 c.created_at
-            FROM CANDIDATE c
-            JOIN STUDENT s
+            FROM candidate c
+            JOIN student s
                 ON c.student_id = s.student_id
-            JOIN ELECTION e
+            JOIN election e
                 ON c.election_id = e.election_id
-            JOIN \`POSITION\` p
+            JOIN \`position\` p
                 ON c.position_id = p.position_id
             ORDER BY c.created_at DESC
         `);
@@ -912,7 +912,7 @@ app.post('/api/candidates', async (req, res) => {
         // Confirm the position belongs to the selected election
         const [positions] = await db.query(
             `SELECT position_id
-             FROM \`POSITION\`
+             FROM \`position\`
              WHERE position_id = ? AND election_id = ?`,
             [Number(position_id), Number(election_id)]
         );
@@ -926,7 +926,7 @@ app.post('/api/candidates', async (req, res) => {
 
         // Save the application; status defaults to pending
         const [result] = await db.query(
-            `INSERT INTO CANDIDATE
+            `INSERT INTO candidate
              (student_id, election_id, position_id, manifesto)
              VALUES (?, ?, ?, ?)`,
             [
@@ -988,7 +988,7 @@ app.patch('/api/candidates/:id/status', async (req, res) => {
 
         // Check whether the candidate exists
         const [candidatesFound] = await db.query(
-            'SELECT candidate_id FROM CANDIDATE WHERE candidate_id = ?',
+            'SELECT candidate_id FROM candidate WHERE candidate_id = ?',
             [candidateId]
         );
 
@@ -1001,7 +1001,7 @@ app.patch('/api/candidates/:id/status', async (req, res) => {
 
         // Update the application status
         await db.query(
-            'UPDATE CANDIDATE SET status = ? WHERE candidate_id = ?',
+            'UPDATE candidate SET status = ? WHERE candidate_id = ?',
             [status, candidateId]
         );
 
@@ -1054,9 +1054,9 @@ app.post('/api/votes/batch', async (req, res) => {
         for (const vote of normalized) {
             const [valid] = await connection.execute(`
                 SELECT c.candidate_id
-                FROM CANDIDATE c
-                JOIN ELECTION e ON e.election_id = c.election_id
-                JOIN \`POSITION\` p ON p.position_id = c.position_id
+                FROM candidate c
+                JOIN election e ON e.election_id = c.election_id
+                JOIN \`position\` p ON p.position_id = c.position_id
                 WHERE c.candidate_id = ?
                   AND c.election_id = ?
                   AND c.position_id = ?
@@ -1127,9 +1127,9 @@ app.post('/api/votes', async (req, res) => {
         // and that voting is within the scheduled election period.
         const [candidatesFound] = await db.query(
             `SELECT c.candidate_id
-             FROM CANDIDATE c
-             JOIN ELECTION e ON e.election_id = c.election_id
-             JOIN \`POSITION\` p ON p.position_id = c.position_id
+             FROM candidate c
+             JOIN election e ON e.election_id = c.election_id
+             JOIN \`position\` p ON p.position_id = c.position_id
              WHERE c.candidate_id = ?
                AND c.election_id = ?
                AND c.position_id = ?
@@ -1206,10 +1206,10 @@ app.get('/api/results', async (req, res) => {
                    p.position_id, p.position_name,
                    c.candidate_id, s.full_name,
                    COUNT(v.vote_id) AS vote_count
-            FROM CANDIDATE c
-            JOIN ELECTION e ON e.election_id = c.election_id
-            JOIN \`POSITION\` p ON p.position_id = c.position_id AND p.election_id = e.election_id
-            JOIN STUDENT s ON s.student_id = c.student_id
+            FROM candidate c
+            JOIN election e ON e.election_id = c.election_id
+            JOIN \`position\` p ON p.position_id = c.position_id AND p.election_id = e.election_id
+            JOIN student s ON s.student_id = c.student_id
             LEFT JOIN vote v ON v.candidate_id = c.candidate_id
                              AND v.election_id = e.election_id
                              AND v.position_id = p.position_id
@@ -1228,8 +1228,8 @@ app.get('/api/results', async (req, res) => {
         const [studentSummary] = await db.query('SELECT COUNT(*) AS eligible_voters FROM student');
         const [positionSummary] = await db.execute(`
             SELECT COUNT(DISTINCT p.position_id) AS positions_contested
-            FROM \`POSITION\` p
-            JOIN CANDIDATE c ON c.position_id = p.position_id AND c.election_id = p.election_id
+            FROM \`position\` p
+            JOIN candidate c ON c.position_id = p.position_id AND c.election_id = p.election_id
             ${selectedElectionId ? 'WHERE p.election_id = ? AND c.status = \'approved\'' : "WHERE c.status = 'approved'"}
         `, selectedElectionId ? [selectedElectionId] : []);
         res.json({

@@ -358,7 +358,7 @@ app.get('/api/elections', async (req, res) => {
                      WHEN NOW() <= e.end_time THEN 'active'
                      ELSE 'completed'
                    END AS computed_status
-            FROM ELECTION e
+            FROM elction e
             ORDER BY e.election_id DESC
         `);
 
@@ -567,7 +567,7 @@ if (
 
 const [existingElections] = await db.execute(
     `SELECT status, start_time, end_time
-     FROM ELECTION
+     FROM election
      WHERE election_id = ?`,
     [electionId]
 );
@@ -656,7 +656,7 @@ if (!/^\d+$/.test(electionId) || Number(electionId) <= 0) {
 
 const [existingElections] = await db.execute(
     `SELECT status
-     FROM ELECTION
+     FROM election
      WHERE election_id = ?`,
     [electionId]
 );
@@ -742,7 +742,7 @@ if (voteCount[0].total > 0) {
 
 
         const [result] = await db.execute(
-            'DELETE FROM ELECTION WHERE election_id = ?',
+            'DELETE FROM election WHERE election_id = ?',
             [electionId]
         );
 
@@ -821,7 +821,7 @@ app.post('/api/positions', async (req, res) => {
         }
         const [electionsFound] = await db.execute(`
             SELECT election_id
-            FROM ELECTION
+            FROM election
             WHERE election_id = ?
               AND LOWER(status) NOT IN ('completed', 'cancelled')
               AND start_time > NOW()

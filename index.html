@@ -73,6 +73,7 @@
         <div class="workspace-label secondary-label">STUDENT PORTAL PREVIEW</div>
         <button class="nav-item" data-view="student-login"><span class="nav-icon">↪</span> Student login</button>
         <button class="nav-item" data-view="cast-vote"><span class="nav-icon">✓</span> Cast vote</button>
+        <button class="nav-item" data-view="candidate-apply"><span class="nav-icon">✎</span> Become a candidate</button>
       </nav>
       <div class="sidebar-bottom">
         <div class="help-card">
@@ -520,6 +521,18 @@
               </aside>
             </div>
           </div>
+        <div class="view portal-view" id="view-candidate-apply">
+          <div class="panel candidate-application-panel"><div class="panel-header"><div><span class="eyebrow">STUDENT PORTAL</span><h2>Apply to become a candidate</h2><p>Choose an upcoming election and position. An administrator must approve your application.</p></div></div>
+            <form id="candidateApplicationForm" class="candidate-application-form">
+              <label for="applicationElection">Election</label><select id="applicationElection" required><option value="">Loading upcoming elections...</option></select>
+              <label for="applicationPosition">Position</label><select id="applicationPosition" required disabled><option value="">Select an election first</option></select>
+              <label for="applicationManifesto">Manifesto (optional)</label><textarea id="applicationManifesto" rows="5" maxlength="2000" placeholder="Tell voters what you want to achieve (maximum 2000 characters)."></textarea>
+              <p class="candidate-application-help">You may apply to different elections independently. Your student account remains eligible to vote.</p>
+              <div id="candidateApplicationError" class="login-error" role="alert" aria-live="polite"></div><button class="primary-btn" type="submit">Submit application →</button>
+            </form></div>
+          <div class="panel candidate-application-panel"><div class="panel-header"><div><h2>My applications</h2><p>Track pending, approved, and rejected applications.</p></div></div>
+            <div class="table-wrap"><table><thead><tr><th>ELECTION</th><th>POSITION</th><th>STATUS</th><th>SUBMITTED</th></tr></thead><tbody id="myCandidateApplications"><tr><td colspan="4">Sign in to view your applications.</td></tr></tbody></table></div></div>
+        </div>
       </section>
       <footer class="footer"><span>© 2026 VoteSphere · College DBMS Project</span><span><i></i> Node.js + MySQL connected</span></footer>
     </main>

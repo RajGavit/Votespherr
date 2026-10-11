@@ -533,6 +533,8 @@ let studentSignedIn = false;
 let ballotSubmitted = false;
 let editingElectionId = null;
 let currentStudentId = null;
+let currentRole = null;
+let currentUser = null;
 
 // Selections are keyed by database position_id so any number of positions is supported.
 const selections = Object.create(null);
@@ -541,6 +543,62 @@ let ballotElectionId = null;
 let ballotLoading = false;
 
 const API_BASE = "";
+
+
+function renderVotingActivityChart() {
+  const svg = $(".chart-svg");
+  const labels = $(".x-labels");
+  const yLabels = $(".y-labels");
+  const range = $("#chartRange")?.value || "all";
+  if (!svg || !labels || !yLabels) return;
+
+  const sorted = [...elections].sort((a, b) => Number(a.election_id ?? a.id) - Number(b.election_id ?? b.id));
+  const visible = range === "latest" ? sorted.slice(-5) : sorted;
+  if (!visible.length) {
+    svg.innerHTML = "";
+    labels.innerHTML = "<span>No election data</span>";
+    yLabels.innerHTML = "<span>—</span><span>—</span><span>—</span><span>—</span><span>—</span><span>0</span>";
+    return;
+  }
+
+  const voteCounts = visible.map(election => Math.max(0, Number(election.votes || 0)));
+  const eligibleCounts = visible.map(election => Math.max(0, Number(election.eligible_voters || 0)));
+  const maxValue = Math.max(1, ...voteCounts, ...eligibleCounts);
+  const chartHeight = 190;
+  const chartWidth = 650;
+  const xFor = index => visible.length === 1 ? chartWidth / 2 : index * chartWidth / (visible.length - 1);
+  const yFor = value => chartHeight - (value / maxValue) * chartHeight;
+  const votePoints = voteCounts.map((value, index) => [xFor(index), yFor(value)]);
+  const eligiblePoints = eligibleCounts.map((value, index) => [xFor(index), yFor(value)]);
+  const pathFor = points => points.map((point, index) => `${index ? "L" : "M"}${point[0].toFixed(1)} ${point[1].toFixed(1)}`).join(" ");
+  const votePath = pathFor(votePoints);
+  const eligiblePath = pathFor(eligiblePoints);
+  const areaPath = `${votePath} L${votePoints[votePoints.length - 1][0].toFixed(1)} 190 L${votePoints[0][0].toFixed(1)} 190 Z`;
+  const ticks = Array.from({length: 6}, (_, index) => Math.round(maxValue * (5 - index) / 5));
+
+  yLabels.innerHTML = ticks.map(value => `<span>${value.toLocaleString()}</span>`).join("");
+  labels.innerHTML = visible.map(election => {
+    const name = election.election_name || election.name || "Election";
+    const shortName = name.length > 12 ? `${name.slice(0, 11)}…` : name;
+    return `<span title="${escapeHtml(name)}">${escapeHtml(shortName)}</span>`;
+  }).join("");
+
+  svg.setAttribute("viewBox", `0 0 ${chartWidth} 220`);
+  svg.setAttribute("aria-label", "Live database chart comparing votes cast and eligible voters by election");
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="areaFill" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stop-color="#0e9f9a" stop-opacity=".24"></stop>
+        <stop offset="100%" stop-color="#0e9f9a" stop-opacity="0"></stop>
+      </linearGradient>
+    </defs>
+    <path class="area-path" d="${areaPath}"></path>
+    <path class="line-path" d="${votePath}" style="stroke:#0e9f9a"></path>
+    <path d="${eligiblePath}" fill="none" stroke="#aab8cc" stroke-width="2" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"></path>
+    ${votePoints.map((point, index) => `<circle cx="${point[0]}" cy="${point[1]}" r="4" style="stroke:#0e9f9a"><title>${escapeHtml(visible[index].election_name || visible[index].name || "Election")}: ${voteCounts[index]} votes</title></circle>`).join("")}
+    ${eligiblePoints.map((point, index) => `<circle cx="${point[0]}" cy="${point[1]}" r="3" style="stroke:#aab8cc"><title>${escapeHtml(visible[index].election_name || visible[index].name || "Election")}: ${eligibleCounts[index]} eligible voters</title></circle>`).join("")}
+  `;
+}
 
 function updateBallotElectionStatus() {
   const badge = $("#ballotElectionStatus");
@@ -573,6 +631,7 @@ async function loadElections() {
     elections = Array.isArray(data.elections) ? data.elections.map(election => ({ ...election, status: election.computed_status || election.status })) : [];
     console.log("Elections loaded from database:", elections);
     updateBallotElectionStatus();
+    renderVotingActivityChart();
     renderElections();
     renderOverview();
     populateResultElectionOptions();
@@ -644,8 +703,12 @@ function emptyRow(columns, message = "No matching records found") {
   return `<tr><td colspan="${columns}"><div class="empty-state"><strong>${message}</strong>Try changing your search or filters.</div></td></tr>`;
 }
 
+function effectiveElectionStatus(election) {
+  return String(election.computed_status || election.status || "upcoming").toLowerCase();
+}
+
 function normalizeElection(election) {
-  const statusRaw = String(election.status || "upcoming").toLowerCase();
+  const statusRaw = effectiveElectionStatus(election);
   const endRaw = election.end || election.end_time || "";
   let formattedEnd = "—";
 
@@ -666,9 +729,13 @@ function normalizeElection(election) {
     name: election.name || election.election_name || "Untitled Election",
     type: election.type || "Student Council",
     status: statusRaw === "active" ? "Live" : statusRaw.charAt(0).toUpperCase() + statusRaw.slice(1),
-    eligible: Number(election.eligible ?? 0),
+    eligible: Number(election.eligible_voters ?? election.eligible ?? 0),
     votes: Number(election.votes ?? 0),
-    progress: Number(election.progress ?? 0),
+    studentsVoted: Number(election.students_voted ?? 0),
+    positionsContested: Number(election.positions_contested ?? 0),
+    progress: Number(election.eligible_voters ?? election.eligible ?? 0)
+      ? Math.round(Number(election.students_voted ?? 0) / Number(election.eligible_voters ?? election.eligible) * 100)
+      : 0,
     start: election.start || election.start_time || "",
     end: formattedEnd
   };
@@ -720,14 +787,58 @@ function renderOverview() {
   if (totalVoters) totalVoters.textContent = voters.length.toLocaleString();
   if (activeElections) {
     activeElections.textContent = elections.filter(election => {
-      const status = String(election.status || "").toLowerCase();
-      return status === "live" || status === "active" || status === "upcoming";
-    }).length;
+      const status = effectiveElectionStatus(election);
+      return status === "live" || status === "active";
+    }).length.toLocaleString();
   }
   if (votesSubmitted) {
     votesSubmitted.textContent = elections.reduce(
       (sum, election) => sum + Number(election.votes || 0), 0
     ).toLocaleString();
+  }
+
+  const totalVotersFoot = document.querySelector("#totalVotersStat")?.closest(".stat-card")?.querySelector(".stat-foot span");
+  if (totalVotersFoot) totalVotersFoot.textContent = voters.length ? "Registered student records" : "No voter records yet";
+  const activeFoot = document.querySelector("#activeElectionsStat")?.closest(".stat-card")?.querySelector(".stat-foot span");
+  if (activeFoot) {
+    const upcoming = elections.filter(election => effectiveElectionStatus(election) === "upcoming").length;
+    activeFoot.textContent = upcoming ? `${upcoming} upcoming` : "Currently accepting votes";
+  }
+  const votesFoot = document.querySelector("#votesSubmittedStat")?.closest(".stat-card")?.querySelector(".stat-foot span");
+  if (votesFoot) votesFoot.textContent = elections.length ? "Recorded across all elections" : "No votes submitted";
+
+  const pendingComplaints = document.querySelector("#pendingComplaintCount");
+  const complaintFoot = pendingComplaints?.closest(".stat-card")?.querySelector(".stat-foot span");
+  if (complaintFoot && pendingComplaints) {
+    complaintFoot.textContent = Number(pendingComplaints.textContent || 0) === 1 ? "Needs attention" : "Awaiting review";
+  }
+
+  const liveElection = elections.find(election => ["active", "live"].includes(effectiveElectionStatus(election)));
+  const livePanel = document.querySelector(".election-panel");
+  if (livePanel) {
+    const badge = livePanel.querySelector(".panel-header .tag");
+    const title = livePanel.querySelector(".live-election-details h3");
+    const description = livePanel.querySelector(".live-election-details p");
+    const turnout = livePanel.querySelector(".live-progress-label strong");
+    const progress = livePanel.querySelector(".progress-track.large span");
+    if (liveElection) {
+      const item = normalizeElection(liveElection);
+      const eligible = Number(liveElection.eligible_voters ?? liveElection.eligible ?? 0);
+      const voted = Number(liveElection.students_voted ?? 0);
+      const percentage = eligible ? Math.round(voted / eligible * 100) : 0;
+      if (badge) { badge.textContent = "LIVE NOW"; badge.className = "tag tag-green"; }
+      if (title) title.textContent = item.name;
+      if (description) description.textContent = `${Number(liveElection.votes || 0).toLocaleString()} votes recorded so far.`;
+      if (turnout) turnout.textContent = `${percentage}%`;
+      if (progress) progress.style.width = `${percentage}%`;
+    } else {
+      const upcoming = elections.find(election => effectiveElectionStatus(election) === "upcoming");
+      if (badge) { badge.textContent = upcoming ? "UPCOMING" : "NO ACTIVE ELECTION"; badge.className = "tag tag-orange"; }
+      if (title) title.textContent = upcoming ? normalizeElection(upcoming).name : "No active election";
+      if (description) description.textContent = upcoming ? "Voting will open at the scheduled start time." : "Create or schedule an election to get started.";
+      if (turnout) turnout.textContent = "—";
+      if (progress) progress.style.width = "0%";
+    }
   }
 }
 
@@ -742,7 +853,7 @@ function renderElections() {
 
   const list = elections.filter(election => {
     const item = normalizeElection(election);
-    const status = String(election.status || "upcoming").toLowerCase();
+    const status = effectiveElectionStatus(election);
     const matchesStatus = filter === "all"
       || status === filter
       || (filter === "live" && (status === "active" || status === "live"));
@@ -1015,6 +1126,9 @@ function renderVoters() {
 }
 
 async function renderResults() {
+  // Election results are administrator-only; skip this request for students and signed-out visitors.
+  if (currentRole !== "admin") return;
+
   const container = $("#resultsByPosition") || $("#presidentResults");
   if (!container) return;
   const electionSelect = $("#resultElection");
@@ -1095,6 +1209,10 @@ const viewMeta = {
 
 function showView(view) {
   if (!viewMeta[view]) return;
+  if (!currentRole) { document.body.classList.add("auth-required"); return; }
+  const adminViews = ["overview", "elections", "candidates", "voters", "results", "complaints"];
+  if (currentRole === "student" && adminViews.includes(view)) { toast("This section is available to administrators only."); view = "cast-vote"; }
+  if (currentRole === "admin" && ["student-login", "cast-vote"].includes(view)) { toast("Student sign-in is required to access the ballot."); view = "overview"; }
   if (view === "cast-vote" && !studentSignedIn) {
     toast("Please sign in to the student portal first.");
     view = "student-login";
@@ -1145,7 +1263,6 @@ $$("[data-go]").forEach(button => button.addEventListener("click", () => showVie
 
 $("#menuBtn")?.addEventListener("click", () => $("#sidebar")?.classList.toggle("open"));
 $("#helpBtn")?.addEventListener("click", () => $("#helpDialog")?.showModal());
-$("#notificationBtn")?.addEventListener("click", () => toast("You’re all caught up — no new notifications."));
 
 function resetElectionForm() {
   const form = $("#electionForm");
@@ -1158,6 +1275,49 @@ function resetElectionForm() {
 $("#createElectionBtn")?.addEventListener("click", () => {
   resetElectionForm();
   $("#electionDialog")?.showModal();
+});
+
+$("#addStudentBtn")?.addEventListener("click", () => {
+  $("#studentForm")?.reset();
+  $("#studentDialog")?.showModal();
+});
+
+$("#cancelStudentBtn")?.addEventListener("click", () => {
+  $("#studentDialog")?.close();
+  $("#studentForm")?.reset();
+});
+
+$("#studentForm")?.addEventListener("submit", async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const submitButton = form.querySelector('button[type="submit"]');
+  const formData = new FormData(form);
+  const yearValue = String(formData.get("year_of_study") || "");
+  const payload = {
+    full_name: String(formData.get("full_name") || "").trim(),
+    email: String(formData.get("email") || "").trim(),
+    department: String(formData.get("department") || "").trim(),
+    year_of_study: yearValue ? Number(yearValue) : null
+  };
+  submitButton.disabled = true;
+  try {
+    const response = await fetch(`${API_BASE}/api/students`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.message || "Could not add student.");
+    form.reset();
+    $("#studentDialog")?.close();
+    await loadVoters();
+    toast(`Student record created. Student ID: ${result.student.student_id}`);
+  } catch (error) {
+    console.error("Error creating student:", error);
+    toast(error.message || "Could not add student.");
+  } finally {
+    submitButton.disabled = false;
+  }
 });
 
 $("#createPositionBtn")?.addEventListener("click", async () => {
@@ -1359,7 +1519,7 @@ fetch(`${API_BASE}/api/elections/${id}`, {
   const candidateButton = event.target.closest("[data-candidate]");
   if (candidateButton) {
     const item = candidates.find(candidate => String(candidate.id) === candidateButton.dataset.candidate);
-    if (item) toast(`${item.name} · ${item.position} · ${item.votes} votes (demo data)`);
+    if (item) toast(`${item.name} · ${item.position} · ${item.status}`);
   }
 
   const complaintButton = event.target.closest("[data-complaint]");
@@ -1387,10 +1547,67 @@ $("#exportVoters")?.addEventListener("click", () => {
   toast("Sample voter directory exported as CSV.");
 });
 
-$("#chartRange")?.addEventListener("change", event => toast(
-  event.target.value === "month" ? "Monthly chart selected (sample visual)." : "Weekly chart selected (sample visual)."
-));
+$("#chartRange")?.addEventListener("change", () => renderVotingActivityChart());
 $("#resultElection")?.addEventListener("change", () => renderResults());
+
+// Student registration is available only to students already added by an administrator.
+function setStudentAuthMode(mode) {
+  const registering = mode === "register";
+  if ($("#studentLoginForm")) $("#studentLoginForm").style.display = registering ? "none" : "";
+  if ($("#studentRegisterForm")) $("#studentRegisterForm").style.display = registering ? "" : "none";
+  if ($("#loginError")) $("#loginError").textContent = "";
+  if ($("#registerError")) $("#registerError").textContent = "";
+  if ($("#studentLoginForm")) $("#studentLoginForm").reset();
+  if ($("#studentRegisterForm")) $("#studentRegisterForm").reset();
+}
+
+$("#showStudentRegister")?.addEventListener("click", () => setStudentAuthMode("register"));
+$("#showStudentLogin")?.addEventListener("click", () => setStudentAuthMode("login"));
+
+$("#studentRegisterForm")?.addEventListener("submit", async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const errorBox = $("#registerError");
+  const submitButton = form.querySelector('button[type="submit"]');
+  const full_name = $("#registerStudentName").value.trim();
+  const email = $("#registerStudentEmail").value.trim();
+  const password = $("#registerStudentPassword").value;
+  const confirmation = $("#registerStudentPasswordConfirm").value;
+  errorBox.textContent = "";
+
+  if (password.length < 8) {
+    errorBox.textContent = "Password must contain at least 8 characters.";
+    return;
+  }
+  if (password !== confirmation) {
+    errorBox.textContent = "The passwords do not match.";
+    return;
+  }
+
+  submitButton.disabled = true;
+  submitButton.textContent = "Creating account...";
+  try {
+    const response = await fetch(`${API_BASE}/api/students/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ full_name, email, password })
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.message || "Could not create student account.");
+    form.reset();
+    setStudentAuthMode("login");
+    if ($("#studentEmail")) $("#studentEmail").value = email;
+    toast("Account created. Sign in using your new password.");
+    if ($("#loginError")) $("#loginError").textContent = "Account created successfully. You can now sign in.";
+  } catch (error) {
+    errorBox.textContent = error.message === "Failed to fetch"
+      ? "Cannot connect to the server. Please try again."
+      : error.message;
+  } finally {
+    submitButton.disabled = false;
+    submitButton.innerHTML = 'Create student account <span>→</span>';
+  }
+});
 
 // Student login is authenticated by the backend; passwords are never checked in the browser.
 $("#studentLoginForm")?.addEventListener("submit", async event => {
@@ -1420,6 +1637,7 @@ $("#studentLoginForm")?.addEventListener("submit", async event => {
     const student = data.student;
     currentStudentId = Number(student.student_id);
     studentSignedIn = true;
+    applyAuthenticatedRole("student", student);
     const fullName = student.full_name || student.name || email.split("@")[0];
     if ($("#pageTitle")) $("#pageTitle").textContent = `Welcome, ${fullName}`;
     if ($("#sidebar .profile-info strong")) $("#sidebar .profile-info strong").textContent = fullName;
@@ -1444,7 +1662,7 @@ $("#studentLoginForm")?.addEventListener("submit", async event => {
 
 function getActiveElection() {
   return elections.find(election => {
-    const status = String(election.status || "").toLowerCase();
+    const status = effectiveElectionStatus(election);
     return status === "active" || status === "live";
   }) || null;
 }
@@ -1453,7 +1671,7 @@ function getBallotPreviewElection() {
   const active = getActiveElection();
   if (active) return active;
   return elections
-    .filter(election => String(election.status || "").toLowerCase() === "upcoming")
+    .filter(election => effectiveElectionStatus(election) === "upcoming")
     .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))[0] || null;
 }
 
@@ -1479,7 +1697,7 @@ async function renderBallot() {
     ballotPositions = await loadPositionsForElection(ballotElectionId);
     if (!activeElection && ballotPositions.length === 0) {
       const upcomingElections = elections
-        .filter(item => String(item.status || "").toLowerCase() === "upcoming")
+        .filter(item => effectiveElectionStatus(item) === "upcoming")
         .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
       for (const upcomingElection of upcomingElections) {
         if (Number(upcomingElection.election_id) === ballotElectionId) continue;
@@ -1688,14 +1906,110 @@ $("#confirmVoteForm")?.addEventListener("submit", async event => {
   }
 });
 
-// Initial rendering. Data-backed elections refresh when the API responds.
-renderOverview();
-renderElections();
-renderCandidates();
-renderVoters();
-renderResults();
-renderComplaints();
-renderBallot();
-loadElections();
-loadCandidates();
-loadVoters();
+function applyAuthenticatedRole(role,user){
+  currentRole=role;currentUser=user||{};
+  document.body.classList.remove("auth-required","admin-role","student-role");
+  document.body.classList.add(role+"-role");
+  if($("#authGate"))$("#authGate").style.display="none";
+
+  const workspaceLabel=$(".sidebar .workspace-label:not(.secondary-label)");
+  const secondaryLabel=$(".sidebar .secondary-label");
+  const nav=$(".sidebar .nav-list");
+  const brandCaption=$(".sidebar .brand small");
+  const sidebarAvatar=$("#sidebar .admin-avatar");
+  const profileName=$("#sidebar .profile-info strong");
+  const profileRole=$("#sidebar .profile-info span");
+
+  if(role==="student"){
+    studentSignedIn=true;
+    currentStudentId=Number(user.student_id);
+    const name=user.full_name||user.name||user.email||"Student";
+    const initials=name.trim().split(/\s+/).map(part=>part[0]).join("").slice(0,2).toUpperCase();
+    if(workspaceLabel)workspaceLabel.textContent="STUDENT WORKSPACE";
+    if(secondaryLabel)secondaryLabel.style.display="none";
+    if(nav)nav.setAttribute("aria-label","Student navigation");
+    if(brandCaption)brandCaption.textContent="STUDENT ELECTIONS";
+    if(profileName)profileName.textContent=name;
+    if(profileRole)profileRole.textContent="Student portal";
+    if(sidebarAvatar)sidebarAvatar.textContent=initials;
+    showView("cast-vote");
+    loadElections();loadCandidates();
+  }else{
+    studentSignedIn=false;
+    currentStudentId=null;
+    if(workspaceLabel)workspaceLabel.textContent="ADMIN WORKSPACE";
+    if(secondaryLabel){secondaryLabel.style.display="block";secondaryLabel.textContent="STUDENT PORTAL PREVIEW";}
+    if(nav)nav.setAttribute("aria-label","Administrator navigation");
+    if(brandCaption)brandCaption.textContent="CAMPUS ELECTIONS";
+    if(profileName)profileName.textContent="Administrator";
+    if(profileRole)profileRole.textContent=user.email||"Election administrator";
+    if(sidebarAvatar)sidebarAvatar.textContent="A";
+    showView("overview");
+    loadElections();loadCandidates();loadVoters();
+  }
+}
+$("#adminLoginForm")?.addEventListener("submit",async event=>{
+  event.preventDefault();const error=$("#adminLoginError"),button=event.currentTarget.querySelector('button[type="submit"]');error.textContent="";button.disabled=true;button.textContent="Signing in...";
+  try{const response=await fetch(`${API_BASE}/api/admin/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("#adminLoginEmail").value.trim(),password:$("#adminLoginPassword").value})});
+    const data=await response.json();if(!response.ok||!data.success)throw new Error(data.message||"Admin login failed.");applyAuthenticatedRole("admin",data.user);toast("Admin login successful.");
+  }catch(error){$("#adminLoginError").textContent=error.message==="Failed to fetch"?"Cannot connect to the server.":error.message;}
+  finally{button.disabled=false;button.textContent="Open admin workspace →";}
+});
+function setGateStudentAuthMode(mode) {
+  const registering = mode === "register";
+  if ($("#gateStudentLoginForm")) $("#gateStudentLoginForm").style.display = registering ? "none" : "";
+  if ($("#gateStudentRegisterForm")) $("#gateStudentRegisterForm").style.display = registering ? "" : "none";
+  if ($("#gateStudentLoginError")) $("#gateStudentLoginError").textContent = "";
+  if ($("#gateStudentRegisterError")) $("#gateStudentRegisterError").textContent = "";
+}
+$("#showGateStudentRegister")?.addEventListener("click", () => setGateStudentAuthMode("register"));
+$("#showGateStudentLogin")?.addEventListener("click", () => setGateStudentAuthMode("login"));
+
+$("#gateStudentRegisterForm")?.addEventListener("submit", async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const errorBox = $("#gateStudentRegisterError");
+  const button = form.querySelector('button[type="submit"]');
+  const full_name = $("#gateRegisterStudentName").value.trim();
+  const email = $("#gateRegisterStudentEmail").value.trim();
+  const password = $("#gateRegisterStudentPassword").value;
+  const confirmation = $("#gateRegisterStudentPasswordConfirm").value;
+  errorBox.textContent = "";
+  if (password.length < 8) { errorBox.textContent = "Password must contain at least 8 characters."; return; }
+  if (password !== confirmation) { errorBox.textContent = "The passwords do not match."; return; }
+  button.disabled = true;
+  button.textContent = "Creating account...";
+  try {
+    const response = await fetch(`${API_BASE}/api/students/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ full_name, email, password })
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.message || "Could not create student account.");
+    $("#gateStudentEmail").value = email;
+    $("#gateStudentPassword").value = "";
+    form.reset();
+    setGateStudentAuthMode("login");
+    $("#gateStudentLoginError").textContent = "Account created successfully. Sign in with your new password.";
+  } catch (error) {
+    errorBox.textContent = error.message === "Failed to fetch" ? "Cannot connect to the server. Please try again." : error.message;
+  } finally {
+    button.disabled = false;
+    button.textContent = "Create student account →";
+  }
+});
+
+$("#gateStudentLoginForm")?.addEventListener("submit",async event=>{
+  event.preventDefault();const error=$("#gateStudentLoginError"),button=event.currentTarget.querySelector('button[type="submit"]');error.textContent="";button.disabled=true;button.textContent="Signing in...";
+  try{const response=await fetch(`${API_BASE}/api/students/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("#gateStudentEmail").value.trim(),password:$("#gateStudentPassword").value})});
+    const data=await response.json();if(!response.ok||!data.success)throw new Error(data.message||"Student login failed.");applyAuthenticatedRole("student",data.student);toast("Student login successful.");
+  }catch(error){$("#gateStudentLoginError").textContent=error.message==="Failed to fetch"?"Cannot connect to the server.":error.message;}
+  finally{button.disabled=false;button.textContent="Open student portal →";}
+});
+$("#logoutBtn")?.addEventListener("click",async()=>{try{await fetch(`${API_BASE}/api/logout`,{method:"POST"});}catch(error){console.warn("Logout request failed",error);}
+  currentRole=null;currentUser=null;currentStudentId=null;studentSignedIn=false;document.body.classList.remove("admin-role","student-role");document.body.classList.add("auth-required");if($("#authGate"))$("#authGate").style.display="grid";
+  if($("#adminLoginPassword"))$("#adminLoginPassword").value="";if($("#gateStudentPassword"))$("#gateStudentPassword").value="";
+});
+async function initializeAuthentication(){try{const response=await fetch(`${API_BASE}/api/auth/me`);const data=await response.json();if(response.ok&&data.success){applyAuthenticatedRole(data.role,data.user);return;}}catch(error){console.warn("No existing authenticated session.",error);}document.body.classList.add("auth-required");}
+initializeAuthentication();

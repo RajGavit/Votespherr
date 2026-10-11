@@ -1696,16 +1696,48 @@ $("#confirmVoteForm")?.addEventListener("submit", async event => {
 });
 
 function applyAuthenticatedRole(role,user){
-  currentRole=role;currentUser=user||{};document.body.classList.remove("auth-required","admin-role","student-role");document.body.classList.add(role+"-role");if($("#authGate"))$("#authGate").style.display="none";
-  if(role==="student"){studentSignedIn=true;currentStudentId=Number(user.student_id);const name=user.full_name||user.name||user.email||"Student";
-    if($("#sidebar .profile-info strong"))$("#sidebar .profile-info strong").textContent=name;
-    if($("#sidebar .profile-info span"))$("#sidebar .profile-info span").textContent="Student portal";
-    if($("#sidebar .admin-avatar"))$("#sidebar .admin-avatar").textContent=name.split(/\\s+/).map(p=>p[0]).join("").slice(0,2).toUpperCase();
-    showView("cast-vote");loadElections();loadCandidates();
-  }else{studentSignedIn=false;currentStudentId=null;
-    if($("#sidebar .profile-info strong"))$("#sidebar .profile-info strong").textContent="Administrator";
-    if($("#sidebar .profile-info span"))$("#sidebar .profile-info span").textContent=user.email||"Election administrator";
-    showView("overview");loadElections();loadCandidates();loadVoters();
+  currentRole=role;currentUser=user||{};
+  document.body.classList.remove("auth-required","admin-role","student-role");
+  document.body.classList.add(role+"-role");
+  if($("#authGate"))$("#authGate").style.display="none";
+
+  const workspaceLabel=$(".sidebar .workspace-label:not(.secondary-label)");
+  const secondaryLabel=$(".sidebar .secondary-label");
+  const nav=$(".sidebar .nav-list");
+  const brandCaption=$(".sidebar .brand small");
+  const topAvatar=$(".top-avatar");
+  const sidebarAvatar=$("#sidebar .admin-avatar");
+  const profileName=$("#sidebar .profile-info strong");
+  const profileRole=$("#sidebar .profile-info span");
+
+  if(role==="student"){
+    studentSignedIn=true;
+    currentStudentId=Number(user.student_id);
+    const name=user.full_name||user.name||user.email||"Student";
+    const initials=name.trim().split(/\s+/).map(part=>part[0]).join("").slice(0,2).toUpperCase();
+    if(workspaceLabel)workspaceLabel.textContent="STUDENT WORKSPACE";
+    if(secondaryLabel)secondaryLabel.style.display="none";
+    if(nav)nav.setAttribute("aria-label","Student navigation");
+    if(brandCaption)brandCaption.textContent="STUDENT ELECTIONS";
+    if(profileName)profileName.textContent=name;
+    if(profileRole)profileRole.textContent="Student portal";
+    if(sidebarAvatar)sidebarAvatar.textContent=initials;
+    if(topAvatar)topAvatar.textContent=initials;
+    showView("cast-vote");
+    loadElections();loadCandidates();
+  }else{
+    studentSignedIn=false;
+    currentStudentId=null;
+    if(workspaceLabel)workspaceLabel.textContent="ADMIN WORKSPACE";
+    if(secondaryLabel){secondaryLabel.style.display="block";secondaryLabel.textContent="STUDENT PORTAL PREVIEW";}
+    if(nav)nav.setAttribute("aria-label","Administrator navigation");
+    if(brandCaption)brandCaption.textContent="CAMPUS ELECTIONS";
+    if(profileName)profileName.textContent="Administrator";
+    if(profileRole)profileRole.textContent=user.email||"Election administrator";
+    if(sidebarAvatar)sidebarAvatar.textContent="AD";
+    if(topAvatar)topAvatar.textContent="AD";
+    showView("overview");
+    loadElections();loadCandidates();loadVoters();
   }
 }
 $("#adminLoginForm")?.addEventListener("submit",async event=>{

@@ -2576,3 +2576,9 @@ body.auth-required{overflow:hidden} body.auth-required .app-shell{visibility:hid
 body.student-role .nav-item[data-view="overview"],body.student-role .nav-item[data-view="elections"],body.student-role .nav-item[data-view="candidates"],body.student-role .nav-item[data-view="voters"],body.student-role .nav-item[data-view="results"],body.student-role .nav-item[data-view="complaints"],body.student-role .nav-divider,body.student-role .secondary-label,body.student-role #createElectionBtn{display:none!important}
 body.admin-role .nav-item[data-view="student-login"],body.admin-role .nav-item[data-view="cast-vote"]{display:none!important}
 @media(max-width:760px){.auth-columns{grid-template-columns:1fr}.auth-gate{padding:12px;align-items:start}.auth-gate-card{padding:22px}}
+
+/* Role-specific workspace polish */
+body.student-role .sidebar .workspace-label:not(.secondary-label){color:#4d67df}
+body.student-role .top-avatar{display:grid;place-items:center;font-size:11px;font-weight:800}
+body.student-role .sidebar .profile-info strong{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.admin-role .top-avatar{display:grid;place-items:center;font-size:11px;font-weight:800}

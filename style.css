@@ -2752,3 +2752,5 @@ body.student-role .sidebar .workspace-label:not(.secondary-label) { color: #81e6
 .auth-register-link:hover{text-decoration:underline}
 .auth-student-stack .auth-form{height:100%;box-sizing:border-box}
 @media(max-width:760px){.auth-student-stack{min-width:0}}
+
+.candidate-application-panel{padding:24px}.candidate-application-form{display:grid;gap:16px;max-width:720px;margin:20px 0 28px}.candidate-application-form label{display:grid;gap:7px;color:var(--ink);font-size:13px;font-weight:600}.candidate-application-form select,.candidate-application-form textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font:inherit}.candidate-application-form textarea{resize:vertical}body.student-role .nav-item[data-view="candidate-apply"]{display:flex}body.admin-role .nav-item[data-view="candidate-apply"]{display:none!important}

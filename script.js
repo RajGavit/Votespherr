@@ -1086,22 +1086,34 @@ function renderCandidates() {
   const grid = $("#candidateGrid");
   if (!grid) return;
 
-  const query = $("#candidateSearch")?.value.toLowerCase() || "";
-  const position = $("#candidatePosition")?.value || "all";
-  const list = candidates.filter(candidate =>
-    (position === "all" || candidate.position === position)
-    && (candidate.name.toLowerCase().includes(query)
-      || candidate.position.toLowerCase().includes(query)
-      || candidate.branch.toLowerCase().includes(query))
-  );
+  // Normalize API values before filtering so a missing/null field cannot
+  // throw during a search and prevent the directory from re-rendering.
+  const query = String($("#candidateSearch")?.value || "").trim().toLocaleLowerCase();
+  const selectedPosition = String($("#candidatePosition")?.value || "all").trim().toLocaleLowerCase();
+  const list = candidates.filter(candidate => {
+    const name = String(candidate.name || "");
+    const position = String(candidate.position || "");
+    const branch = String(candidate.branch || "");
+    const matchesPosition = selectedPosition === "all"
+      || position.trim().toLocaleLowerCase() === selectedPosition;
+    const searchableText = `${name} ${position} ${branch} ${candidate.id ?? ""}`.toLocaleLowerCase();
+    return matchesPosition && searchableText.includes(query);
+  });
 
   grid.innerHTML = list.length
-    ? list.map(candidate => `<article class="candidate-card">
-            <div class="candidate-top"><div class="candidate-avatar ${candidate.color}">${candidate.initials}</div>
-            <div><h3>${candidate.name}</h3><div class="branch">${candidate.branch} · ${candidate.id}</div></div></div>
-            <span class="tag tag-blue">${candidate.position.toUpperCase()}</span><p>${candidate.manifesto}</p>
-            <div class="candidate-meta"><span>Votes received <strong>${candidate.votes.toLocaleString()}</strong></span><button data-candidate="${candidate.id}">View profile ↗</button></div>
-        </article>`).join("")
+    ? list.map(candidate => {
+        const name = String(candidate.name || "Unnamed candidate");
+        const position = String(candidate.position || "Unspecified position");
+        const branch = String(candidate.branch || "Election");
+        const manifesto = String(candidate.manifesto || "No manifesto provided.");
+        const votes = Number(candidate.votes || 0);
+        return `<article class="candidate-card">
+            <div class="candidate-top"><div class="candidate-avatar ${candidate.color || "blue"}">${candidate.initials || "?"}</div>
+            <div><h3>${name}</h3><div class="branch">${branch} · ${candidate.id ?? ""}</div></div></div>
+            <span class="tag tag-blue">${position.toUpperCase()}</span><p>${manifesto}</p>
+            <div class="candidate-meta"><span>Votes received <strong>${votes.toLocaleString()}</strong></span><button data-candidate="${candidate.id}">View profile ↗</button></div>
+        </article>`;
+      }).join("")
     : `<div class="panel empty-state"><strong>${candidates.length ? "No candidates found" : "No candidates registered yet"}</strong>${candidates.length ? "Try another name or position." : "Candidates will appear here after they are registered."}</div>`;
 }
 

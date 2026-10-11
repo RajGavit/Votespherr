@@ -1069,6 +1069,9 @@ function renderVoters() {
 }
 
 async function renderResults() {
+  // Election results are administrator-only; skip this request for students and signed-out visitors.
+  if (currentRole !== "admin") return;
+
   const container = $("#resultsByPosition") || $("#presidentResults");
   if (!container) return;
   const electionSelect = $("#resultElection");

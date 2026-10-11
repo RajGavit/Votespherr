@@ -1,6 +1,7 @@
 
 const express = require('express');
 const path = require('path');
+const crypto = require('crypto');
 
 const db = require('./db');
 
@@ -59,6 +60,75 @@ app.get('/', (req, res) => {
 app.get('/style.css', (req, res) => res.sendFile(path.join(FRONTEND_DIR, 'style.css')));
 app.get('/script.js', (req, res) => res.sendFile(path.join(FRONTEND_DIR, 'script.js')));
 
+const SESSION_SECRET = process.env.SESSION_SECRET || '';
+const SESSION_COOKIE = 'votesphere_session';
+const SESSION_TTL_SECONDS = 8 * 60 * 60;
+function signSession(payload) {
+  const encoded = Buffer.from(JSON.stringify({...payload, exp: Math.floor(Date.now()/1000)+SESSION_TTL_SECONDS})).toString('base64url');
+  return encoded + '.' + crypto.createHmac('sha256', SESSION_SECRET).update(encoded).digest('base64url');
+}
+function verifySession(token) {
+  if (!SESSION_SECRET || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 2) return null;
+  const expected = crypto.createHmac('sha256', SESSION_SECRET).update(parts[0]).digest();
+  let supplied;
+  try { supplied = Buffer.from(parts[1], 'base64url'); } catch { return null; }
+  if (expected.length !== supplied.length || !crypto.timingSafeEqual(expected, supplied)) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
+    if (!payload.exp || payload.exp <= Math.floor(Date.now()/1000)) return null;
+    if (!['admin','student'].includes(payload.role)) return null;
+    if (payload.role === 'student' && (!Number.isInteger(Number(payload.id)) || Number(payload.id) <= 0)) return null;
+    return payload;
+  } catch { return null; }
+}
+function setSessionCookie(res, payload) {
+  res.cookie(SESSION_COOKIE, signSession(payload), {httpOnly:true, secure:process.env.NODE_ENV === 'production', sameSite:'lax', path:'/', maxAge:SESSION_TTL_SECONDS*1000});
+}
+function readCookie(req, name) {
+  for (const part of (req.headers.cookie || '').split(';')) {
+    const i = part.indexOf('=');
+    if (i >= 0 && part.slice(0,i).trim() === name) return decodeURIComponent(part.slice(i+1).trim());
+  }
+  return null;
+}
+app.use('/api', (req,res,next) => {
+  const route=req.path, method=req.method.toUpperCase();
+  const publicRoutes=(method==='POST' && ['/admin/login','/students/login','/students/register','/logout'].includes(route)) ||
+    (method==='GET' && ['/auth/me','/db-test','/elections','/positions','/candidates'].includes(route));
+  req.auth=verifySession(readCookie(req,SESSION_COOKIE));
+  if (publicRoutes) return next();
+  if (!req.auth) return res.status(401).json({success:false,message:'Please sign in to continue.'});
+  if (route==='/votes' || route==='/votes/batch') {
+    if(req.auth.role!=='student') return res.status(403).json({success:false,message:'A student account is required to vote.'});
+    return next();
+  }
+  if(req.auth.role!=='admin') return res.status(403).json({success:false,message:'Administrator access is required.'});
+  next();
+});
+app.post('/api/admin/login', async (req,res) => {
+  try {
+    const {email,password}=req.body||{};
+    const adminEmail=String(process.env.ADMIN_EMAIL||'').trim().toLowerCase();
+    const passwordHash=process.env.ADMIN_PASSWORD_HASH||'';
+    if(!SESSION_SECRET||!adminEmail||!passwordHash) return res.status(503).json({success:false,message:'Admin login is not configured. Set SESSION_SECRET, ADMIN_EMAIL and ADMIN_PASSWORD_HASH in the server environment.'});
+    if(typeof email!=='string'||typeof password!=='string'||email.trim().toLowerCase()!==adminEmail) return res.status(401).json({success:false,message:'Invalid admin email or password.'});
+    if(!(await bcrypt.compare(password,passwordHash))) return res.status(401).json({success:false,message:'Invalid admin email or password.'});
+    setSessionCookie(res,{role:'admin',id:'configured-admin',email:adminEmail});
+    res.json({success:true,role:'admin',user:{email:adminEmail}});
+  } catch(error) { console.error('Admin login error:',error.message); res.status(500).json({success:false,message:'Admin login failed.'}); }
+});
+app.get('/api/auth/me',(req,res)=>{
+  if(!req.auth) return res.status(401).json({success:false,message:'Not signed in.'});
+  res.json({success:true,role:req.auth.role,user:req.auth.role==='student'?{student_id:req.auth.id,full_name:req.auth.full_name,email:req.auth.email}:{email:req.auth.email}});
+});
+app.post('/api/logout',(req,res)=>{
+  res.clearCookie(SESSION_COOKIE,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',path:'/'});
+  res.json({success:true,message:'Signed out.'});
+});
+
+
 app.post('/api/test', (req, res) => {
     console.log(req.body);
 
@@ -108,6 +178,50 @@ app.get('/api/students', async (req, res) => {
     } catch (error) {
         console.error('Error fetching students:', error.message);
         res.status(500).json({ success: false, message: 'Failed to fetch student directory.' });
+    }
+});
+
+app.post('/api/students', async (req, res) => {
+    try {
+        const { full_name, email, department, year_of_study } = req.body || {};
+        const name = typeof full_name === 'string' ? full_name.trim() : '';
+        const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+        const normalizedDepartment = typeof department === 'string' ? department.trim() : '';
+        const year = year_of_study === '' || year_of_study == null ? null : Number(year_of_study);
+
+        if (!name || name.length > 150) {
+            return res.status(400).json({ success: false, message: 'Full name is required and must be at most 150 characters.' });
+        }
+        if (!normalizedEmail || normalizedEmail.length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+            return res.status(400).json({ success: false, message: 'Please provide a valid email address.' });
+        }
+        if (normalizedDepartment.length > 100) {
+            return res.status(400).json({ success: false, message: 'Department must be at most 100 characters.' });
+        }
+        if (year !== null && (!Number.isInteger(year) || year < 1 || year > 6)) {
+            return res.status(400).json({ success: false, message: 'Year of study must be between 1 and 6.' });
+        }
+
+        const [existing] = await db.execute('SELECT student_id FROM student WHERE email = ?', [normalizedEmail]);
+        if (existing.length) {
+            return res.status(409).json({ success: false, message: 'A student with this email already exists.' });
+        }
+
+        const [result] = await db.execute(
+            'INSERT INTO student (full_name, email, department, year_of_study, password_hash) VALUES (?, ?, ?, ?, \'\')',
+            [name, normalizedEmail, normalizedDepartment || null, year]
+        );
+        return res.status(201).json({
+            success: true,
+            message: 'Student record created. The student can now register using this name and email.',
+            student: { student_id: result.insertId, full_name: name, email: normalizedEmail, department: normalizedDepartment || null, year_of_study: year }
+        });
+    } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ success: false, message: 'A student with this email already exists.' });
+        }
+        console.error('Error creating student record:', error.message);
+        return res.status(500).json({ success: false, message: 'Failed to create student record.' });
     }
 });
 
@@ -206,47 +320,17 @@ if (
 
 
 const [existingStudents] = await db.execute(
-    'SELECT student_id FROM student WHERE email = ?',
+    `SELECT student_id, full_name, email, password_hash, department, year_of_study FROM student WHERE email = ?`,
     [normalizedEmail]
 );
-
-if (existingStudents.length > 0) {
-    return res.status(409).json({
-        success: false,
-        message: 'An account with this email already exists'
-    });
-}
-
-const hashedPassword = await bcrypt.hash(password, 12);
-
-
-
-
-const [result] = await db.execute(
-    `INSERT INTO student
-        (full_name, email, password_hash, department, year_of_study)
-     VALUES (?, ?, ?, ?, ?)`,
-    [
-        full_name.trim(),
-        normalizedEmail,
-        hashedPassword,
-        department ? department.trim() : null,
-        year_of_study ?? null
-    ]
-);
-
-
-return res.status(201).json({
-    success: true,
-    message: 'Student registered successfully',
-    student: {
-        student_id: result.insertId,
-        full_name: full_name.trim(),
-        email: normalizedEmail,
-        department: department ? department.trim() : null,
-        year_of_study: year_of_study ?? null
-    }
-});
+if (existingStudents.length === 0) return res.status(403).json({success:false,message:'No pre-registered student record matches this email. Contact the administrator.'});
+const rosterStudent=existingStudents[0];
+if(String(rosterStudent.full_name).trim().toLowerCase()!==full_name.trim().toLowerCase()) return res.status(403).json({success:false,message:'The name does not match the pre-registered student record.'});
+if(rosterStudent.password_hash) return res.status(409).json({success:false,message:'This student already has an account. Please sign in.'});
+const hashedPassword=await bcrypt.hash(password,12);
+const [updateResult]=await db.execute('UPDATE student SET password_hash = ? WHERE student_id = ? AND (password_hash IS NULL OR password_hash = \'\')',[hashedPassword,rosterStudent.student_id]);
+if(updateResult.affectedRows!==1) return res.status(409).json({success:false,message:'This student account was already created. Please sign in.'});
+return res.status(201).json({success:true,message:'Student account created successfully.',student:{student_id:rosterStudent.student_id,full_name:rosterStudent.full_name,email:rosterStudent.email,department:rosterStudent.department,year_of_study:rosterStudent.year_of_study}});
 
 
 
@@ -310,10 +394,8 @@ app.post('/api/students/login', async (req, res) => {
 
         const student = students[0];
 
-        const passwordMatches = await bcrypt.compare(
-            password,
-            student.password_hash
-        );
+        if (!student.password_hash) return res.status(401).json({success:false,message:'Invalid email or password'});
+        const passwordMatches = await bcrypt.compare(password, student.password_hash);
 
         if (!passwordMatches) {
             return res.status(401).json({
@@ -322,6 +404,8 @@ app.post('/api/students/login', async (req, res) => {
             });
         }
 
+        if (!SESSION_SECRET) return res.status(503).json({success:false,message:'SESSION_SECRET is not configured on the server.'});
+        setSessionCookie(res,{role:'student',id:Number(student.student_id),email:student.email,full_name:student.full_name});
         return res.json({
             success: true,
             message: 'Login successful',
@@ -357,7 +441,14 @@ app.get('/api/elections', async (req, res) => {
                      WHEN NOW() < e.start_time THEN 'upcoming'
                      WHEN NOW() <= e.end_time THEN 'active'
                      ELSE 'completed'
-                   END AS computed_status
+                   END AS computed_status,
+                   (SELECT COUNT(*) FROM vote v WHERE v.election_id = e.election_id) AS votes,
+                   (SELECT COUNT(*) FROM student) AS eligible_voters,
+                   (SELECT COUNT(DISTINCT v.student_id) FROM vote v WHERE v.election_id = e.election_id) AS students_voted,
+                   (SELECT COUNT(DISTINCT p.position_id)
+                    FROM \`position\` p
+                    JOIN candidate c ON c.position_id = p.position_id AND c.election_id = p.election_id
+                    WHERE p.election_id = e.election_id AND c.status = 'approved') AS positions_contested
             FROM election e
             ORDER BY e.election_id DESC
         `);
@@ -708,7 +799,7 @@ const [candidateCount] = await db.execute(
 
 const [resultCount] = await db.execute(
     `SELECT COUNT(*) AS total
-     FROM ELECTION_RESULT
+     FROM election_result
      WHERE election_id = ?`,
     [electionId]
 );
@@ -1033,7 +1124,7 @@ app.post('/api/votes/batch', async (req, res) => {
     let connection;
     try {
         const normalized = votes.map(vote => ({
-            student_id: Number(vote.student_id),
+            student_id: Number(req.auth.id),
             election_id: Number(vote.election_id),
             position_id: Number(vote.position_id),
             candidate_id: Number(vote.candidate_id)
@@ -1104,21 +1195,45 @@ app.post('/api/votes', async (req, res) => {
             candidate_id
         } = req.body;
 
-        const studentId = Number(student_id);
+        // The authenticated session is the source of truth for voter identity.
+        const studentId = Number(req.auth?.id);
+        const requestedStudentId = student_id === undefined || student_id === null || student_id === ''
+            ? studentId
+            : Number(student_id);
         const electionId = Number(election_id);
         const positionId = Number(position_id);
         const candidateId = Number(candidate_id);
 
-        // Validate IDs
+        if (!Number.isInteger(studentId) || studentId <= 0) {
+            return res.status(401).json({
+                success: false,
+                message: 'A valid student session is required to vote.'
+            });
+        }
+
+        if (!Number.isInteger(requestedStudentId) || requestedStudentId <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Student ID must be a positive integer.'
+            });
+        }
+
+        if (requestedStudentId !== studentId) {
+            return res.status(403).json({
+                success: false,
+                message: 'You can only vote using your own student account.'
+            });
+        }
+
+        // Validate election, position, and candidate IDs.
         if (
-            !Number.isInteger(studentId) || studentId <= 0 ||
             !Number.isInteger(electionId) || electionId <= 0 ||
             !Number.isInteger(positionId) || positionId <= 0 ||
             !Number.isInteger(candidateId) || candidateId <= 0
         ) {
             return res.status(400).json({
                 success: false,
-                message: 'Valid student, election, position, and candidate IDs are required.'
+                message: 'Valid election, position, and candidate IDs are required.'
             });
         }
 

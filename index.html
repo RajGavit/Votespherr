@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f7f8fc" />
+  <title>VoteSphere | Digital Voting Management System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#" aria-label="VoteSphere home">
+        <span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m5 12 4.2 4.2L19.5 6.5" />
+            <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+          </svg></span>
+        <span>Vote<span class="brand-light">Sphere</span><small>CAMPUS ELECTIONS</small></span>
+      </a>
+      <div class="workspace-label">ADMIN WORKSPACE</div>
+      <nav class="nav-list" aria-label="Admin navigation">
+        <button class="nav-item active" data-view="overview"><span class="nav-icon">◫</span> Overview</button>
+        <button class="nav-item" data-view="elections"><span class="nav-icon">▣</span> Elections <span
+            class="nav-count">3</span></button>
+        <button class="nav-item" data-view="candidates"><span class="nav-icon">♙</span> Candidates</button>
+        <button class="nav-item" data-view="voters"><span class="nav-icon">♧</span> Voters</button>
+        <button class="nav-item" data-view="results"><span class="nav-icon">▥</span> Results</button>
+        <button class="nav-item" data-view="complaints"><span class="nav-icon">⚑</span> Complaints <span
+            class="nav-count warn">2</span></button>
+        <div class="nav-divider"></div>
+        <div class="workspace-label secondary-label">STUDENT PORTAL PREVIEW</div>
+        <button class="nav-item" data-view="student-login"><span class="nav-icon">↪</span> Student login</button>
+        <button class="nav-item" data-view="cast-vote"><span class="nav-icon">✓</span> Cast vote</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="help-card">
+          <div class="help-icon">✦</div><strong>Need a hand?</strong>
+          <p>Explore the demo or reach your election team.</p><button id="helpBtn">View help <span>↗</span></button>
+        </div>
+        <div class="profile-row">
+          <div class="avatar admin-avatar">AD</div>
+          <div class="profile-info"><strong>Admin Demo</strong><span>Election administrator</span></div><button
+            class="more-btn" aria-label="More profile options">•••</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <button class="mobile-menu" id="menuBtn" aria-label="Open menu">☰</button>
+        <div class="breadcrumb"><span>Workspace</span><b>/</b><strong id="crumbTitle">Overview</strong></div>
+        <div class="top-actions"><span class="demo-pill"><i></i> DEMO MODE</span><button class="icon-button"
+            id="notificationBtn" aria-label="Notifications">♧<span class="notification-dot"></span></button>
+          <div class="top-avatar">AD</div>
+        </div>
+      </header>
+
+      <section class="page-content">
+        <div class="page-heading" id="globalHeading">
+          <div>
+            <div class="eyebrow" id="pageEyebrow">CAMPUS ELECTIONS</div>
+            <h1 id="pageTitle">Good morning, Admin <span class="wave">✦</span></h1>
+            <p id="pageSubtitle">Here's what's happening with your campus elections today.</p>
+          </div>
+          <button class="primary-btn" id="createElectionBtn"><span>＋</span> Create election</button>
+        </div>
+
+        <div class="view active" id="view-overview">
+          <div class="stats-grid">
+            <article class="stat-card">
+              <div class="stat-top"><span>Total voters</span><span class="stat-icon blue">♧</span></div>
+              <div class="stat-value" id="totalVotersStat">0</div>
+              <div class="stat-foot"><span>No voter records yet</span></div>
+              <div class="mini-bars" aria-hidden="true"><i style="height:30%"></i><i style="height:44%"></i><i
+                  style="height:38%"></i><i style="height:62%"></i><i style="height:50%"></i><i
+                  style="height:75%"></i><i style="height:68%"></i><i style="height:92%"></i></div>
+            </article>
+            <article class="stat-card">
+              <div class="stat-top"><span>Active elections</span><span class="stat-icon purple">▣</span></div>
+              <div class="stat-value" id="activeElectionsStat">0</div>
+              <div class="stat-foot"><span>No elections created</span></div>
+              <div class="stat-bottom-line"><span style="width:0%"></span></div>
+            </article>
+            <article class="stat-card">
+              <div class="stat-top"><span>Votes submitted</span><span class="stat-icon green">✓</span></div>
+              <div class="stat-value" id="votesSubmittedStat">0</div>
+              <div class="stat-foot"><span>No votes submitted</span></div>
+              <div class="progress-track"><span style="width:0%"></span></div>
+            </article>
+            <article class="stat-card">
+              <div class="stat-top"><span>Pending complaints</span><span class="stat-icon orange">⚑</span></div>
+              <div class="stat-value" id="pendingComplaintCount">0</div>
+              <div class="stat-foot"><span>No complaints yet</span></div>
+              <div class="complaint-spark">
+                <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              </div>
+            </article>
+          </div>
+          <div class="content-grid">
+            <article class="panel turnout-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Voting activity</h2>
+                  <p>Participation across the current election</p>
+                </div><select id="chartRange" aria-label="Chart time range">
+                  <option value="week">This week</option>
+                  <option value="month">This month</option>
+                </select>
+              </div>
+              <div class="chart-legend"><span><i class="legend-dot"></i> Votes cast</span><span><i
+                    class="legend-dot pale"></i> Eligible voters</span></div>
+              <div class="chart-wrap">
+                <div class="y-labels">
+                  <span>500</span><span>400</span><span>300</span><span>200</span><span>100</span><span>0</span>
+                </div>
+                <div class="chart-area">
+                  <div class="grid-lines"><i></i><i></i><i></i><i></i><i></i><i></i></div><svg class="chart-svg"
+                    viewBox="0 0 650 220" preserveAspectRatio="none" role="img" aria-label="Voting activity line chart">
+                    <defs>
+                      <linearGradient id="areaFill" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stop-color="#4d70e8" stop-opacity=".22" />
+                        <stop offset="100%" stop-color="#4d70e8" stop-opacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <path class="area-path"
+                      d="M0 177 C35 170 40 155 80 162 S125 128 160 139 S205 110 240 122 S285 88 320 105 S365 67 400 83 S445 45 480 62 S525 32 560 48 S610 17 650 26 L650 220 L0 220 Z" />
+                    <path class="line-path"
+                      d="M0 177 C35 170 40 155 80 162 S125 128 160 139 S205 110 240 122 S285 88 320 105 S365 67 400 83 S445 45 480 62 S525 32 560 48 S610 17 650 26" />
+                    <circle cx="480" cy="62" r="4" />
+                    <circle cx="650" cy="26" r="4" />
+                  </svg>
+                  <div class="x-labels">
+                    <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                  </div>
+                </div>
+              </div>
+            </article>
+            <article class="panel election-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Live election</h2>
+                  <p>Currently accepting votes</p>
+                </div><span class="tag tag-orange">NOT STARTED</span>
+              </div>
+              <div class="election-art">
+                <div class="art-orbit orbit-one"></div>
+                <div class="art-orbit orbit-two"></div>
+                <div class="ballot-card"><span class="ballot-check">✓</span>
+                  <div class="ballot-line long"></div>
+                  <div class="ballot-line"></div>
+                  <div class="ballot-line short"></div>
+                </div>
+                <div class="art-star star-one">✦</div>
+                <div class="art-star star-two">✧</div>
+              </div>
+              <div class="live-election-details"><span class="tag tag-blue">GET STARTED</span>
+                <h3>No election created yet</h3>
+                <p>Create your first campus election to begin.</p>
+                <div class="live-progress-label"><span>Voter turnout</span><strong>—</strong></div>
+                <div class="progress-track large"><span style="width:0%"></span></div><button
+                  class="secondary-btn full-width" data-go="elections">Manage elections <span>→</span></button>
+              </div>
+            </article>
+          </div>
+          <article class="panel recent-panel">
+            <div class="panel-header">
+              <div>
+                <h2>Election overview</h2>
+                <p>Track status and participation at a glance</p>
+              </div><button class="text-btn" data-go="elections">View all elections <span>→</span></button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ELECTION NAME</th>
+                    <th>STATUS</th>
+                    <th>PARTICIPATION</th>
+                    <th>END DATE</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="overviewElectionRows"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+
+        <div class="view" id="view-elections">
+          <div class="toolbar">
+            <div class="search-box"><span>⌕</span><input id="electionSearch" placeholder="Search elections..." /></div>
+            <select id="electionFilter">
+              <option value="all">All statuses</option>
+              <option value="Live">Live</option>
+              <option value="Upcoming">Upcoming</option>
+              <option value="Completed">Completed</option>
+            </select>
+            <button class="secondary-btn" id="createPositionBtn" type="button">+ Create Position</button>
+          </div>
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>All elections</h2>
+                <p>Manage schedules, positions and voting status.</p>
+              </div><span class="muted-count" id="electionCount">3 elections</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ELECTION NAME</th>
+                    <th>STATUS</th>
+                    <th>ELIGIBLE VOTERS</th>
+                    <th>VOTES CAST</th>
+                    <th>END DATE</th>
+                    <th>ACTION</th>
+                  </tr>
+                </thead>
+                <tbody id="electionsRows"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+        <div class="view" id="view-candidates">
+          <div class="toolbar">
+            <div class="search-box"><span>⌕</span><input id="candidateSearch"
+                placeholder="Search candidates or positions..." /></div><select id="candidatePosition"><option value="all">All positions</option></select>
+          </div>
+          <!-- Admin: Candidate Applications -->
+          <article class="panel" style="margin-bottom: 24px;">
+            <div class="panel-header">
+              <div>
+                <h2>Candidate Applications</h2>
+                <p>Review and approve student nominations.</p>
+              </div>
+              <span class="tag tag-orange" id="pendingCandidatesCount">
+                Pending review
+              </span>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>CANDIDATE</th>
+                    <th>ELECTION</th>
+                    <th>POSITION</th>
+                    <th>MANIFESTO</th>
+                    <th>STATUS</th>
+                    <th>ACTION</th>
+                  </tr>
+                </thead>
+                <tbody id="candidateApplicationsRows">
+                  <tr>
+                    <td colspan="6">Loading candidate applications...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <!-- Existing candidate cards -->
+          <div class="candidate-grid" id="candidateGrid"></div>
+        </div>
+        <div class="view" id="view-voters">
+          <div class="stats-grid compact-stats">
+            <article class="stat-card">
+              <div class="stat-top"><span>Registered students</span><span class="stat-icon blue">♧</span></div>
+              <div class="stat-value" id="registeredStudentCount">0</div>
+              <div class="stat-foot"><span>No student records yet</span></div>
+            </article>
+            <article class="stat-card">
+              <div class="stat-top"><span>Verified voters</span><span class="stat-icon green">✓</span></div>
+              <div class="stat-value" id="verifiedVoterCount">0</div>
+              <div class="stat-foot"><span>No voters verified</span></div>
+            </article>
+            <article class="stat-card">
+              <div class="stat-top"><span>Not yet voted</span><span class="stat-icon orange">◷</span></div>
+              <div class="stat-value" id="notYetVotedCount">0</div>
+              <div class="stat-foot"><span>No active election</span></div>
+            </article>
+          </div>
+          <div class="toolbar">
+            <div class="search-box"><span>⌕</span><input id="voterSearch"
+                placeholder="Search by name, ID or branch..." /></div><select id="voterFilter">
+              <option value="all">All voters</option>
+              <option value="Verified">Verified</option>
+              <option value="Pending">Pending</option>
+            </select>
+          </div>
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Voter directory</h2>
+                <p>Sample student records for the interface demo.</p>
+              </div><button class="secondary-btn" id="exportVoters">↓ Export CSV</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>STUDENT</th>
+                    <th>STUDENT ID</th>
+                    <th>BRANCH</th>
+                    <th>YEAR</th>
+                    <th>VERIFICATION</th>
+                    <th>VOTED</th>
+                  </tr>
+                </thead>
+                <tbody id="votersRows"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+        <div class="view" id="view-results">
+          <div class="results-banner">
+            <div><span class="tag tag-light">ELECTION REPORT</span>
+              <h2>Results &amp; analytics</h2>
+              <p>Review candidate performance and voter participation.</p>
+            </div>
+            <div class="banner-icon">▥</div>
+          </div>
+          <div class="toolbar"><select id="resultElection">
+              <option value="">No elections yet</option>
+            </select><span class="results-note">Live database results</span></div>
+          <div class="results-grid">
+            <article class="panel result-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Candidate results</h2>
+                  <p>Votes by position</p>
+                </div><span class="tag tag-green">Database count</span>
+              </div>
+              <div id="resultsByPosition" class="result-bars"><div class="empty-state">Loading election results...</div></div>
+            </article>
+            <article class="panel result-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Voting summary</h2>
+                  <p id="resultElectionName">Selected election</p>
+                </div>
+              </div>
+              <div class="donut-wrap">
+                <div class="donut empty-donut">
+                  <div><strong id="resultTurnout">0%</strong><span>Turnout</span></div>
+                </div>
+                <div class="donut-legend">
+                  <p><i class="legend-dot"></i><span>Votes cast<strong id="resultVotesCast">0</strong></span></p>
+                  <p><i class="legend-dot pale"></i><span>Not voted<strong id="resultNotVoted">0</strong></span></p>
+                </div>
+              </div>
+              <div class="result-summary"><span>Eligible voters</span><strong id="resultEligible">0</strong></div>
+              <div class="result-summary"><span>Positions contested</span><strong id="resultPositions">0</strong></div>
+            </article>
+          </div>
+        </div>
+        <div class="view" id="view-complaints">
+          <div class="toolbar">
+            <div class="search-box"><span>⌕</span><input id="complaintSearch" placeholder="Search complaints..." />
+            </div><select id="complaintFilter">
+              <option value="all">All statuses</option>
+              <option value="Pending">Pending</option>
+              <option value="Resolved">Resolved</option>
+            </select>
+          </div>
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Election complaints</h2>
+                <p>Review reports submitted by students.</p>
+              </div><span class="tag tag-orange" id="complaintStatusTag">2 need attention</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>COMPLAINT</th>
+                    <th>SUBMITTED BY</th>
+                    <th>ELECTION</th>
+                    <th>DATE</th>
+                    <th>STATUS</th>
+                    <th>ACTION</th>
+                  </tr>
+                </thead>
+                <tbody id="complaintsRows"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+
+        <div class="view portal-view" id="view-student-login">
+          <div class="portal-layout">
+            <div class="portal-intro"><span class="tag tag-light">STUDENT PORTAL</span>
+              <h2>Your voice.<br><span>Your campus.</span></h2>
+              <p>Take part in shaping campus life. Sign in to review eligible elections and make your choice count.</p>
+              <div class="portal-benefit"><span>✓</span>
+                <div><strong>One student, one vote</strong><small>Voting eligibility is checked for each
+                    election.</small></div>
+              </div>
+              <div class="portal-benefit"><span>✓</span>
+                <div><strong>Clear and accessible</strong><small>Review candidate details before choosing.</small></div>
+              </div>
+              <div class="portal-decoration">
+                <div class="decor-card">✓</div>
+                <div class="decor-dot dot-a"></div>
+                <div class="decor-dot dot-b"></div>
+              </div>
+            </div>
+            <div class="login-card">
+              <div class="login-emblem">✓</div><span class="eyebrow">WELCOME BACK</span>
+              <h2>Student sign in</h2>
+              <p>Sign in with a registered student account. Your credentials are checked by the backend.</p>
+              <form id="studentLoginForm"><label>Student email<input type="email" id="studentEmail" required
+                    placeholder="student@college.edu" autocomplete="username"></label><label>Password<input
+                    type="password" id="studentPassword" required placeholder="Enter any demo password"
+                    autocomplete="current-password" minlength="4"></label>
+                <div class="login-options"><label class="check-label"><input type="checkbox" id="rememberStudent">
+                    Remember me</label><span>Demo access</span></div><button class="primary-btn login-submit"
+                  type="submit">Sign in to portal <span>→</span></button>
+                <div class="login-error" id="loginError" aria-live="polite"></div>
+              </form>
+              <div class="login-foot">Academic prototype · Authentication handled by local API</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="view portal-view" id="view-cast-vote">
+          <div class="voting-header">
+            <div><span class="eyebrow">STUDENT PORTAL / ACTIVE ELECTION</span>
+              <h2>Cast your vote</h2>
+              <p>Review each candidate and select one candidate for the position.</p>
+              <span class="tag tag-orange" id="ballotElectionStatus">NO ACTIVE ELECTION</span>
+            </div>
+            
+<div class="vote-warning"><span>ⓘ</span>
+  <div><strong>Database-connected voting</strong>
+    <p>Your selections are submitted to the voting server. The server validates candidate eligibility and prevents duplicate votes.</p>
+  </div>
+</div>
+
+            </div>
+            <div class="vote-layout">
+              <div class="vote-main">
+                <div class="panel vote-election-heading">
+                  <div><span class="tag tag-blue">STUDENT COUNCIL 2026</span>
+                    <h3>Student Council Election</h3>
+                    <p>Choose one candidate for each position below.</p>
+                  </div>
+                  <div class="vote-deadline"><span>VOTING CLOSES</span><strong>Today, 5:00 PM</strong></div>
+                </div>
+                <form id="ballotForm">
+                  <div id="ballotPositions">
+                    <div class="empty-state"><strong>Loading ballot positions...</strong><p>Please wait while positions are loaded.</p></div>
+                  </div>
+                  <div class="ballot-submit-row"><span>Your choices stay editable until you submit your ballot.</span><button class="primary-btn" type="submit">Review selections <span>→</span></button>
+                  </div>
+                </form>
+              </div>
+              <aside class="panel vote-summary">
+                <h3>Ballot summary</h3>
+                <p>Student Council Election 2026</p>
+                <div class="summary-count"><strong id="selectedCount">0 of 0</strong><span>positions selected</span>
+                </div>
+                <div class="summary-progress"><span id="selectedProgress"></span></div>
+                <div class="summary-list" id="summaryPositions"><div class="empty-state">No positions loaded yet.</div></div>
+                <div class="privacy-note"><span>♢</span>
+                  <p><strong>Make your choice carefully</strong><br>In a real system, ballot privacy and duplicate-vote
+                    prevention must be enforced by the backend.</p>
+                </div>
+              </aside>
+            </div>
+          </div>
+      </section>
+      <footer class="footer"><span>© 2026 VoteSphere · College DBMS Project</span><span><i></i> Node.js + MySQL connected</span></footer>
+    </main>
+  </div>
+
+  <dialog id="electionDialog" class="modal">
+    <form id="electionForm">
+      <div class="modal-head">
+        <div><span class="eyebrow">ELECTION SETUP</span>
+          <h2>Create an election</h2>
+        </div><button class="close-modal" type="button" aria-label="Close">×</button>
+      </div>
+      <p class="modal-description">Add a new election to your campus workspace.</p><label>Election name<input
+          name="name" required placeholder="e.g. Cultural Committee Election" /></label>
+      <div class="form-row"><label>Start date<input name="start" type="date" required /></label><label>End date<input
+            name="end" type="date" required /></label></div><label>Election type<select name="type">
+          <option>Student Council</option>
+          <option>Technical Committee</option>
+          <option>Sports Committee</option>
+          <option>Cultural Committee</option>
+        </select></label>
+      <div class="modal-actions"><button class="secondary-btn" id="cancelElectionBtn"
+          type="button">Cancel</button><button class="primary-btn" type="submit">Create election</button></div>
+    </form>
+  </dialog>
+  <dialog id="positionDialog" class="modal">
+    <form id="positionForm">
+      <div class="modal-head">
+        <div><span class="eyebrow">POSITION SETUP</span><h2>Create a position</h2></div>
+        <button class="close-modal" type="button" aria-label="Close">×</button>
+      </div>
+      <p class="modal-description">Add a position to an upcoming election.</p>
+      <label>Select election
+        <select name="election_id" id="positionElectionSelect" required><option value="">Loading elections...</option></select>
+      </label>
+      <label>Position name
+        <input name="position_name" required maxlength="100" placeholder="e.g. Treasurer" />
+      </label>
+      <label>Description (optional)
+        <textarea name="description" maxlength="1000" placeholder="Describe the responsibilities of this position."></textarea>
+      </label>
+      <div class="modal-actions">
+        <button class="secondary-btn" id="cancelPositionBtn" type="button">Cancel</button>
+        <button class="primary-btn" type="submit">Create position</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="confirmVoteDialog" class="modal">
+    <form method="dialog" id="confirmVoteForm">
+      <div class="modal-head">
+        <div><span class="eyebrow">BALLOT REVIEW</span>
+          <h2>Review your selections</h2>
+        </div><button class="close-modal" type="button" aria-label="Close">×</button>
+      </div>
+      <p class="modal-description">Check your choices before submitting your ballot.</p>
+      <div id="voteReviewList" class="vote-review-list"></div>
+      <div class="vote-warning compact-warning"><span>ⓘ</span>
+        <div><strong>Vote confirmation</strong>
+          <p>Your selections will be validated by the server and saved to the database.</p>
+        </div>
+      </div>
+      <div class="modal-actions"><button class="secondary-btn" id="backToBallot" type="button">Edit
+          choices</button><button class="primary-btn" type="submit">Submit vote</button></div>
+    </form>
+  </dialog>
+  <dialog id="helpDialog" class="modal">
+    <form method="dialog">
+      <div class="modal-head">
+        <div><span class="eyebrow">QUICK GUIDE</span>
+          <h2>Welcome to VoteSphere</h2>
+        </div><button class="close-modal" type="button" aria-label="Close">×</button>
+      </div>
+      <p class="modal-description">VoteSphere is a college project prototype connected to a Node.js API and MySQL database.</p>
+      <div class="guide-list">
+        <p><b>01</b><span><strong>Explore admin modules</strong>Manage elections, browse candidates and voters, review
+            results, and resolve complaints.</span></p>
+        <p><b>02</b><span><strong>Preview student voting</strong>Use Student login, then visit Cast vote to review positions and submit selections when an election is active.</span></p>
+        <p><b>03</b><span><strong>Database-backed modules</strong>Elections, positions, candidates, voters, results and vote recording use the local API and MySQL.
+            Complaints are illustrative in this academic prototype.</span></p>
+      </div>
+      <div class="modal-actions"><button class="primary-btn" value="close">Got it</button></div>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="script.js"></script>
+</body>
+
+</html>

@@ -127,24 +127,37 @@
               <div class="panel-header">
                 <div>
                   <h2>Voting activity</h2>
-                  <p>Recorded votes across your elections</p>
+                  <p>Participation across the current election</p>
                 </div><select id="chartRange" aria-label="Chart time range">
-                  <option value="all">All elections</option>
-                  <option value="top">Top 7 elections</option>
+                  <option value="week">This week</option>
+                  <option value="month">This month</option>
                 </select>
               </div>
               <div class="chart-legend"><span><i class="legend-dot"></i> Votes cast</span><span><i
-                    class="legend-dot pale"></i> Students who voted</span></div>
+                    class="legend-dot pale"></i> Eligible voters</span></div>
               <div class="chart-wrap">
-                <div class="y-labels" id="activityYAxis" aria-hidden="true">
-                  <span>0</span><span>0</span><span>0</span><span>0</span><span>0</span><span>0</span>
+                <div class="y-labels">
+                  <span>500</span><span>400</span><span>300</span><span>200</span><span>100</span><span>0</span>
                 </div>
-                <div class="chart-area" id="activityChartArea">
-                  <div class="grid-lines"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-                  <svg class="chart-svg" id="activityChart" viewBox="0 0 650 220" preserveAspectRatio="none" role="img" aria-label="Database-backed votes by election">
-                    <text x="325" y="110" text-anchor="middle" fill="currentColor">Loading election activity…</text>
+                <div class="chart-area">
+                  <div class="grid-lines"><i></i><i></i><i></i><i></i><i></i><i></i></div><svg class="chart-svg"
+                    viewBox="0 0 650 220" preserveAspectRatio="none" role="img" aria-label="Voting activity line chart">
+                    <defs>
+                      <linearGradient id="areaFill" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stop-color="#4d70e8" stop-opacity=".22" />
+                        <stop offset="100%" stop-color="#4d70e8" stop-opacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <path class="area-path"
+                      d="M0 177 C35 170 40 155 80 162 S125 128 160 139 S205 110 240 122 S285 88 320 105 S365 67 400 83 S445 45 480 62 S525 32 560 48 S610 17 650 26 L650 220 L0 220 Z" />
+                    <path class="line-path"
+                      d="M0 177 C35 170 40 155 80 162 S125 128 160 139 S205 110 240 122 S285 88 320 105 S365 67 400 83 S445 45 480 62 S525 32 560 48 S610 17 650 26" />
+                    <circle cx="480" cy="62" r="4" />
+                    <circle cx="650" cy="26" r="4" />
                   </svg>
-                  <div class="x-labels" id="activityXAxis"></div>
+                  <div class="x-labels">
+                    <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                  </div>
                 </div>
               </div>
             </article>

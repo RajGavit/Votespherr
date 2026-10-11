@@ -445,6 +445,16 @@
                   type="submit">Sign in to portal <span>→</span></button>
                 <div class="login-error" id="loginError" aria-live="polite"></div>
               </form>
+              <p class="login-register-switch">New student? <button type="button" class="text-btn" id="showStudentRegister">Create account</button></p>
+              <form id="studentRegisterForm" style="display:none" novalidate>
+                <label>Full name<input type="text" id="registerStudentName" name="full_name" required maxlength="150" placeholder="Your registered full name" autocomplete="name"></label>
+                <label>Student email<input type="email" id="registerStudentEmail" name="email" required maxlength="100" placeholder="student@college.edu" autocomplete="email"></label>
+                <label>Create password<input type="password" id="registerStudentPassword" name="password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters"></label>
+                <label>Confirm password<input type="password" id="registerStudentPasswordConfirm" required minlength="8" autocomplete="new-password" placeholder="Enter the password again"></label>
+                <div class="login-error" id="registerError" aria-live="polite"></div>
+                <button class="primary-btn login-submit" type="submit">Create student account <span>→</span></button>
+                <p class="login-register-switch">Already registered? <button type="button" class="text-btn" id="showStudentLogin">Back to sign in</button></p>
+              </form>
               <div class="login-foot">Secure sign-in · Credentials verified by the server</div>
             </div>
           </div>

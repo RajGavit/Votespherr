@@ -358,7 +358,7 @@ app.get('/api/elections', async (req, res) => {
                      WHEN NOW() <= e.end_time THEN 'active'
                      ELSE 'completed'
                    END AS computed_status
-            FROM elction e
+            FROM election e
             ORDER BY e.election_id DESC
         `);
 
